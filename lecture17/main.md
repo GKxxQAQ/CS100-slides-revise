@@ -11,8 +11,7 @@ math: mathjax
 
 - Constructors and destructors
 - Copy control
-- Type alias members
-- `static` members
+- Type alias members and `static` members
 
 ---
 
@@ -43,7 +42,7 @@ for (int i = 0; i != n; ++i) {
 </div>
 
 Every time the loop body is executed, `s` undergoes initialization and destruction.
-- `std::string` **owns** some resources (memory that contains the content).
+- `std::string` **owns** some resources (memory that stores the characters).
 - `std::string` must *somehow* release that resources (deallocate that memory) at the end of its lifetime.
 
 ---
@@ -730,3 +729,154 @@ If a class has a user-declared copy constructor but without a user-decalred copy
 - **This behavior has been deprecated since C++11**, due to "the rule of three".
 
 Into modern C++: **The Rule of Five** (will be talked about in later lectures.)
+
+---
+
+# Type alias members, `static` members
+
+---
+
+## Type aliases in C++: `using`.
+
+A better way of declaring type aliases:
+
+```cpp
+// C-style
+typedef long long LL;
+// C++-style
+using LL = long long;
+```
+
+It is more readable when dealing with compound types:
+
+```cpp
+// C-style
+typedef int intarray_t[1000];
+// C++-style
+using intarray_t = int[1000];
+```
+
+`using` can also be used to declare *alias templates* (in later lectures), while `typedef` cannot.
+
+---
+
+## Type alias members
+
+A class can have **type alias members**:
+
+```cpp
+class Dynarray {
+ public:
+  using size_type = std::size_t;
+  size_type size() const {
+    return m_length;
+  }
+};
+```
+
+Usage: `ClassName::TypeAliasName`
+
+```cpp
+for (Dynarray::size_type i = 0; i != a.size(); ++i)
+  // ...
+```
+
+---
+
+## Type alias members
+
+All standard library containers and `std::string` define the type alias member `size_type` as the return-type of `.size()`:
+
+```cpp
+std::string::size_type i = s.size();
+std::vector<int>::size_type j = v.size();
+std::list<int>::size_type k = l.size();
+```
+
+Why?
+
+---
+
+## Type alias members
+
+All standard library containers and `std::string` define the type alias member `size_type` as the return-type of `.size()`:
+
+```cpp
+std::string::size_type i = s.size();
+std::vector<int>::size_type j = v.size();
+std::list<int>::size_type k = l.size();
+```
+
+- This type is **container-dependent**: Different containers may choose different types suitable for representing sizes.
+  - The Qt containers often use `int` as `size_type`.
+- Define `Container::size_type` to achieve good **consistency** and **generality**.
+
+---
+
+## `static` data members
+
+A `static` data member:
+
+```cpp
+class A {
+  static int something;
+  // other members ...
+};
+```
+
+Just consider it as a **global variable**, except that
+- its name is in the **class scope**: `A::something`, and that
+- **access modifiers** also apply to it: here `something` is `private`.
+
+---
+
+## `static` data members
+
+A `static` data member:
+
+```cpp
+class A {
+  static int something;
+  // other members ...
+};
+```
+
+There is only one `A::something`: it does not belong to any object of `A`. It belongs to the **class** `A`.
+
+It can also be accessed by `a.something` (where `a` is an object of type `A`), but `a.something` and `b.something` refer to the same variable.
+
+---
+
+## `static` member functions
+
+A `static` member function:
+
+```cpp
+class A {
+ public:
+  static void fun(int x, int y);
+};
+```
+
+Just consider it as a normal non-member function, except that
+- its name is in the **class scope**: `A::fun(x, y)`, and that
+- access modifiers also apply to it: here `fun` is `public`.
+
+---
+
+## `static` member functions
+
+A `static` member function:
+
+```cpp
+class A {
+ public:
+  static void fun(int x, int y);
+};
+```
+
+`A::fun` does not belong to any object of `A`. It belongs to the **class** `A`.
+- Therefore, this function cannot access any non-`static` members of `A`.
+- There is no `this` pointer inside `fun`.
+
+It can also be called by `a.fun(x, y)` (where `a` is an object of type `A`), but here `a` will not be bound to a `this` pointer.
