@@ -10,7 +10,7 @@ math: mathjax
 ## Contents
 
 - Constructors and destructors
-- Copy constructors
+- Copy control
 - Type alias members
 - `static` members
 
@@ -358,7 +358,7 @@ The **RAII** idiom: **R**esource **A**cquisition **I**s **I**nitialization.
 
 ---
 
-# Copy constructors
+# Copy control
 
 ---
 
@@ -557,3 +557,176 @@ By saying `= delete`, we define a **deleted** copy constructor:
 ComplicatedDevice a = something();
 ComplicatedDevice b = a; // Error: calling deleted function
 ```
+
+---
+
+## Copy-assignment operator
+
+Apart from copy-initialization, there is another form of copying:
+
+```cpp
+std::string s1 = "hello", s2 = "world";
+s1 = s2; // s1 becomes a copy of s2, representing "world"
+```
+
+Here `=` is the **assignment operator**.
+
+`=` is the assignment operator **only when it is in an expression.**
+- `s1 = s2` is an expression.
+- `std::string s1 = s2` is in a **declaration statement**, not an expression.
+
+---
+
+## Dynarray: copy-assignment operator
+
+The copy-assignent operator is defined in the form of **operator overloading**:
+- We will talk about more on operator overloading in a few weeks.
+
+```cpp
+class Dynarray {
+ public:
+  Dynarray &operator=(const Dynarray &other);
+};
+```
+
+- The function name is `operator=`.
+- In consistent with built-in assignment operators, `operator=` returns **reference to the left-hand side object** (the object being assigned).
+  - It is `*this`.
+
+---
+
+## Dynarray: copy-assignment operator
+
+We also want the copy-assignment operator to copy the contents, not only an address.
+
+```cpp
+class Dynarray {
+ public:
+  Dynarray &operator=(const Dynarray &other) {
+    m_storage = new int[other.size()];
+    for (std::size_t i = 0; i != other.size(); ++i)
+      m_storage[i] = other.at(i);
+    m_length = other.size();
+    return *this;
+  }
+};
+```
+
+Is this correct?
+
+---
+
+## Dynarray: copy-assignment operator
+
+**Avoid memory leaks! Deallocate the memory you don't use!**
+
+```cpp
+class Dynarray {
+ public:
+  Dynarray &operator=(const Dynarray &other) {
+    delete[] m_storage; // !!!
+    m_storage = new int[other.size()];
+    for (std::size_t i = 0; i != other.size(); ++i)
+      m_storage[i] = other.at(i);
+    m_length = other.size();
+    return *this;
+  }
+};
+```
+
+Is this correct?
+
+---
+
+## Dynarray: copy-assignment operator
+
+What if **self-assignment** happens?
+
+```cpp
+class Dynarray {
+ public:
+  Dynarray &operator=(const Dynarray &other) {
+    // If `other` and `*this` are actually the same object,
+    // the memory is deallocated and the data are lost! (DISASTER)
+    delete[] m_storage;
+    m_storage = new int[other.size()];
+    for (std::size_t i = 0; i != other.size(); ++i)
+      m_storage[i] = other.at(i);
+    m_length = other.size();
+    return *this;
+  }
+};
+```
+
+---
+
+## Dynarray: copy-assignment operator
+
+Assignment operators should be **self-assignment-safe**.
+
+```cpp
+class Dynarray {
+ public:
+  Dynarray &operator=(const Dynarray &other) {
+    int *new_data = new int[other.size()];
+    for (std::size_t i = 0; i != other.size(); ++i)
+      new_data[i] = other.at(i);
+    delete[] m_storage;
+    m_storage = new_data;
+    m_length = other.size();
+    return *this;
+  }
+};
+```
+
+This is self-assignment-safe. (Think about it.)
+
+---
+
+## Synthesized, defaulted and deleted copy-assignment operator
+
+Like the copy constructor:
+- The copy-assignment operator can also be **deleted**, by declaring it as `= delete;`.
+- If you don't define it, the compiler will generate one that copy-assigns all the members, as if
+  
+  ```cpp
+  class Dynarray {
+   public:
+    Dynarray &operator=(const Dynarray &other) {
+      m_storage = other.m_storage;
+      m_length = other.m_length;
+      return *this;
+    }
+  };
+  ```
+- You can also require a synthesized one explicitly by saying `= default;`.
+
+---
+
+## The rule of three (IMPORTANT)
+
+Among the **copy constructor**, the **copy-assignment operator** and the **destructor**:
+- If a class needs a user-declared version of one of them, **usually**, it needs a user-declared version of **each** of them.
+- Why?
+
+---
+
+## The rule of three (IMPORTANT)
+
+Among the **copy constructor**, the **copy-assignment operator** and the **destructor**:
+- If a class needs a user-declared version of one of them,
+- **usually**, it is a class that **manages some resources**,
+- for which **the default behavior of the copy-control members does not suffice**.
+- Therefore, all of the three special functions need a user-declared version.
+  - Define them in a correct, well-defined manner.
+  - If a class should not be copy-constructible or copy-assignable, **delete that function**.
+
+---
+
+## The rule of three (IMPORTANT)
+
+If a class has a user-declared copy constructor but without a user-decalred copy-assignment operator,
+- the compiler still synthesizes a default copy-assignment operator.
+- **This behavior has been deprecated since C++11**, due to "the rule of three".
+
+Into modern C++: **The Rule of Five** (will be talked about in later lectures.)
