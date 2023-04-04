@@ -331,7 +331,7 @@ void print(const Dynarray &a) {
 void reverse(Dynarray &a) {
   for (std::size_t i = 0,
     j = a.size() - 1; i < j; ++i, --j)
-    std::swap(a[i], a[j]);
+    std::swap(a.at(i), a.at(j));
 }
 ```
   </div>
@@ -342,7 +342,7 @@ int main() {
   int n; std::cin >> n;
   Dynarray array(n);
   for (int i = 0; i != n; ++i)
-    std::cin >> array[i];
+    std::cin >> array.at(i);
   reverse(array);
   print(array);
   return 0;
