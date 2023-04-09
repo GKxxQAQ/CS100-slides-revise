@@ -14,8 +14,6 @@ math: mathjax
   - Move Constructor
   - Move Assignment Operator
   - The Rule of Five
-- `std::move`
-- Automatic Move and Copy Elision
 
 ---
 
@@ -325,3 +323,131 @@ class Dynarray {
 ---
 
 ## Lvalues are Copied; Rvalues are Moved
+
+Before we move on, let's define a function for demonstration.
+
+Suppose we have a function that concatenates two `Dynarray`s:
+
+```cpp
+Dynarray concat(const Dynarray &a, const Dynarray &b) {
+  Dynarray result(a.size() + b.size());
+  for (std::size_t i = 0; i != a.size(); ++i)
+    result.at(i) = a.at(i);
+  for (std::size_t i = 0; i != b.size(); ++i)
+    result.at(a.size() + i) = b.at(i);
+  return result;
+}
+```
+
+Which assignment operator should be called?
+
+```cpp
+a = concat(b, c);
+```
+
+---
+
+## Lvalues are Copied; Rvalues are Moved
+
+Lvalues are copied; rvalues are moved ...
+
+```cpp
+a = concat(b, c); // move assignment operator,
+                  // because concat(b, c) generates an rvalue.
+a = b; // copy assignment operator
+```
+
+---
+
+## Lvalues are Copied; Rvalues are Moved
+
+Lvalues are copied; rvalues are moved ...
+
+```cpp
+a = concat(b, c); // move assignment operator,
+                  // because concat(b, c) generates an rvalue.
+a = b; // copy assignment operator
+```
+
+... but rvalues are copied if there is no move operation.
+
+```cpp
+// If Dynarray has no move assignment operator, this is a copy assignment.
+a = concat(b, c)
+```
+
+---
+
+## Synthesized Move Operations
+
+Like copy operations, we can use `=default` to require a synthesized move operation that has the default behaviors.
+
+```cpp
+struct X {
+  X(X &&) = default;
+  X &operator=(X &&) = default;
+};
+```
+
+- The synthesized move operations call the corresponding move operations of each member in the order in which they are declared.
+- The synthesized move operations are `noexcept`.
+
+---
+
+## The Rule of Five
+
+The updated *copy control members*:
+
+- copy constructor
+- copy assignment operator
+- move constructor
+- move assignment operator
+- destructor
+
+If one of them has a user-provided version, the copy control of the class is thought of to have special behaviors.
+
+---
+
+## The Rule of Five
+
+- The move constructor or the move assignment operator will not be generated if any of the rest four members have a user-provided version.
+- The copy constructor or copy assignment operator, if not provided by the user, will be implicitly `delete`d if the class has a user-provided move operation.
+- The generation of the copy constructor or copy assignment operator is **deprecated** (since C++11) when the class has a user-proided copy operation or a destructor.
+  - This is why some of you see this error:
+  
+    > Implicitly-declared copy assignment operator is deprecated, because the class has a user-provided copy constructor.
+
+---
+
+## The Rule of Five
+
+The *copy control members* in modern C++:
+
+- copy constructor
+- copy assignment operator
+- move constructor
+- move assignment operator
+- destructor
+
+**The Rule of Five**: Define zero or five of them.
+
+---
+
+## How to Invoke a Move Operation?
+
+Suppose we give our `Dynarray` a label:
+
+```cpp
+class Dynarray {
+  int *m_storage;
+  std::size_t m_length;
+  std::string m_label;
+};
+```
+
+The move assignment operator should invoke the **move assignment operator** on `m_label`. But how?
+
+```cpp
+m_label = other.m_label; // calls copy assignment operator,
+                         // because other.m_label is an lvalue.
+```
