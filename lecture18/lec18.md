@@ -14,6 +14,8 @@ math: mathjax
   - Move Constructor
   - Move Assignment Operator
   - The Rule of Five
+- `std::move`
+- NRVO, Move and Copy Elision
 
 ---
 
@@ -451,3 +453,133 @@ The move assignment operator should invoke the **move assignment operator** on `
 m_label = other.m_label; // calls copy assignment operator,
                          // because other.m_label is an lvalue.
 ```
+
+---
+
+# `std::move`
+
+---
+
+## `std::move`
+
+Defined in `<utility>`
+
+`std::move(x)` performs an **lvalue to rvalue cast**:
+
+```cpp
+int ival = 42;
+int &&rref = ival; // Error
+int &&rref2 = std::move(ival); // Correct
+```
+
+Calling `std::move(x)` tells the compiler that:
+- `x` is an lvalue, but
+- we want to treat `x` as an **rvalue**.
+
+---
+
+## `std::move`
+
+`std::move(x)` indicates that we want to treat `x` as an **rvalue**, which means that `x` will be *moved from*.
+
+The call to `std::move` **promises** that we do not intend to use `x` again,
+
+- except to assign to it or to destroy it.
+
+After a call to `std::move`, **we cannot make any assumptions about the value of the moved-from object.**
+
+"`std::move` does not *move* anything. It just makes a *promise*."
+
+---
+
+## Use `std::move`
+
+```cpp
+class Dynarray {
+  int *m_storage;
+  std::size_t m_length;
+  std::string m_label;
+ public:
+  Dynarray(Dynarray &&other) noexcept
+      : m_storage(other.m_storage), m_length(other.m_length),
+        m_label(std::move(other.m_label)) {
+    other.m_storage = nullptr;
+    other.m_length = 0;
+  }
+};
+```
+
+---
+
+## Use `std::move`
+
+```cpp
+class Dynarray {
+  int *m_storage;
+  std::size_t m_length;
+  std::string m_label;
+ public:
+  Dynarray &operator=(Dynarray &&other) noexcept {
+    if (this != &other) {
+      delete[] m_storage;
+      m_storage = other.m_storage; m_length = other.m_length;
+      m_label = std::move(other.m_label);
+      other.m_storage = nullptr; other.m_length = 0;
+    }
+    return *this;
+  }
+};
+```
+
+---
+
+## Use `std::move`
+
+Recall the **slow** string concatenation:
+
+```cpp
+std::string s;
+for (int i = 0; i != n; ++i)
+  s = s + 'a';
+```
+
+- To compute `s + 'a'`, a **copy** of `s` is made because `s` is an **lvalue**. (Slow)
+- The result of `s + 'a'` is stored in a **temporary object**, say `tmp`.
+- Then the assignment `s = tmp` is performed, which is a **move** since `tmp` is an rvalue.
+
+---
+
+## Use `std::move`
+
+Recall the **slow** string concatenation:
+
+```cpp
+std::string s;
+for (int i = 0; i != n; ++i)
+  s = s + 'a';
+```
+
+- To compute `s + 'a'`, a copy of `s` is made because `s` is an **lvalue**.
+- Since the original value of `s` is not used anymore (after computing `s + 'a'`), is it possible to avoid this copy?
+
+---
+
+## Use `std::move`
+
+Require a move instead of copy, explicitly, by calling `std::move`.
+
+```cpp
+std::string s;
+for (int i = 0; i != n; ++i)
+  s = std::move(s) + 'a';
+```
+
+- If the left-hand side object is an rvalue, this concatenation is directly performed by appending the right-hand side object to it.
+  - This is reasonable, since the value of a *moved-from* object do not need to be preserved.
+
+---
+
+# NRVO, Move and Copy Elision
+
+---
+
