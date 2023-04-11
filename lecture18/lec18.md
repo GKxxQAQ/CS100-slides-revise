@@ -583,3 +583,101 @@ for (int i = 0; i != n; ++i)
 
 ---
 
+## Returning a Temporary (pure rvalue)
+
+```cpp
+std::string foo(const std::string &a, const std::string &b) {
+  return a + b; // a temporary
+}
+std::string s = foo(a, b);
+```
+
+- First, a temporary is generated to store the result of `a + b`.
+- How is this temporary returned?
+
+---
+
+## Returning a Temporary (pure rvalue)
+
+```cpp
+std::string foo(const std::string &a, const std::string &b) {
+  return a + b; // a temporary
+}
+std::string s = foo(a, b);
+```
+
+Since C++17, **no copy or move** is made here. The initialization of `s` is the same as
+
+```cpp
+std::string s(a + b);
+```
+
+This is called **copy elision**.
+
+---
+
+## Returning a Named Object
+
+```cpp
+Dynarray concat(const Dynarray &a, const Dynarray &b) {
+  Dynarray result(a.size() + b.size());
+  for (std::size_t i = 0; i != a.size(); ++i)
+    result.at(i) = a.at(i);
+  for (std::size_t i = 0; i != b.size(); ++i)
+    result.at(a.size() + i) = b.at(i);
+  return result;
+}
+a = concat(b, c);
+```
+
+- `result` is a local object of `concat`.
+- Since C++11, `return result` performs a **move initialization** of a temporary object, say `tmp`.
+- Then a **move assignment** to `a` is performed.
+
+---
+
+## Named Return Value Optimization, NRVO
+
+```cpp
+Dynarray concat(const Dynarray &a, const Dynarray &b) {
+  Dynarray result(a.size() + b.size());
+  // ...
+  return result;
+}
+Dynarray a = concat(b, c); // Initialization
+```
+
+NRVO transforms this code to
+
+```cpp
+// Pseudo C++ code.
+void concat(Dynarray &result, const Dynarray &a, const Dynarray &b) {
+  // Pseudo C++ code. For demonstration only.
+  result.Dynarray::Dynarray(a.size() + b.size()); // construct in-place
+  // ...
+}
+Dynarray a@; // Uninitialized.
+concat(a@, b, c);
+```
+
+so that no copy or move is needed.
+
+---
+
+## Named Return Value Optimization, NRVO
+
+Note:
+
+- NRVO was invented decades ago (even before C++98).
+- NRVO is an **optimization**, but not mandatory.
+- Even if NRVO is performed, the move constructor should still be available. (Because the compiler can choose not to perform NRVO.)
+
+---
+
+## Summary
+
+In modern C++, unnecessary copies are greatly avoided by:
+
+- move, with the `return`ed lvalue treated as an rvalue, and
+- NRVO, which constructs in-place the object to be initialized, and
+- copy-elision, which avoids the move or copy of temporary objects.
