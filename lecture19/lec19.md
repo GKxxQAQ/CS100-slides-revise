@@ -145,4 +145,285 @@ A temporary is move-initialized from `s`, and then move-assigned to `state`.
 
 ---
 
+## `unique_ptr` for array type
+
+By default, the destructor of `std::unique_ptr<T>` uses a `delete` expression to destroy the object it holds.
+
+What happens if `std::unique_ptr<T> up(new T[n]);`?
+
+---
+
+## `unique_ptr` for array type
+
+By default, the destructor of `std::unique_ptr<T>` uses a `delete` expression to destroy the object it holds.
+
+What happens if `std::unique_ptr<T> up(new T[n]);`?
+
+- The memory is obtained using `new[]`, but deallocated by `delete`! - Undefined behavior.
+
+---
+
+## `unique_ptr` for array type
+
+A *template specialization*: `std::unique_ptr<T[]>`
+
+- Specially designed to represent pointers that point to a "dynamic array" of objects.
+- Has some array-specific operators, e.g. `operator[]`.
+- Does not support `operator*` and `operator->`.
+- Uses `delete[]` instead of `delete`.
+
+```cpp
+auto up = std::make_unique<int[]>(n);
+std::unique_ptr<int[]> up2(new int[n]{}); // equivalent
+for (int i = 0; i != n; ++i)
+  std::cout << up[i] << ' ';
+```
+
+---
+
+## `unique_ptr` for array type
+
+When you want to have "an array of things":
+
+- `std::unique_ptr<T[]>` manages the memory well,
+- **but STL containers do a better job!**
+
+---
+
 # `std::shared_ptr` 
+
+---
+
+## Motivation
+
+A `unique_ptr` uniquely owns an object, but sometimes this is not convenient:
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+```cpp
+std::vector<Object *> objects;
+Object *get_object(int i) {
+  return objects[i];
+}
+```
+  </div>
+  <div>
+
+```cpp
+std::vector<unique_ptr<Object>> objects;
+unique_ptr<Object> get_object(int i) {
+  return objects[i]; // Error
+}
+```
+  </div>
+</div>
+
+We want to design a smart pointer (let's call it `SharedPtr`) that allows the object it manages to be *shared*.
+
+- A `unique_ptr` destroys the object it manages when the pointer itself is destroyed.
+- If we allow many `SharedPtr`s to point to the same object, how can we know when to destroy that object?
+
+---
+
+## Idea: Reference counting
+
+Set a **counter** that counts how many `SharedPtr`s are pointing to it:
+
+```cpp
+struct CountedObject {
+  Object the_object;
+  int ref_cnt = 1;
+};
+```
+
+When a new object is created by a `SharedPtr`, set the `ref_cnt` to `1`.
+
+---
+
+## Idea: Reference counting
+
+When a `SharedPtr` is copied, let them point to the same object, and increment the counter.
+
+```cpp
+class SharedPtr {
+  CountedObject *m_ptr;
+ public:
+  SharedPtr(const SharedPtr &other)
+      : m_ptr(other.m_ptr) { ++m_ptr->ref_cnt; }
+};
+```
+
+---
+
+## Idea: Reference counting
+
+For copy assignment: the counter of the old object should be decremented.
+
+- If it reaches zero, destroy that object!
+
+```cpp
+class SharedPtr {
+  CountedObject *m_ptr;
+ public:
+  SharedPtr &operator=(const SharedPtr &other) {
+    if (--m_ptr->ref_cnt == 0)
+      delete m_ptr;
+    m_ptr = other.m_ptr;
+    ++m_ptr->ref_cnt;
+    return *this;
+  }
+};
+```
+
+**\* Is this correct?**
+
+---
+
+## Idea: Reference counting
+
+Self-assignment safe!!!
+
+```cpp
+class SharedPtr {
+  CountedObject *m_ptr;
+ public:
+  SharedPtr &operator=(const SharedPtr &other) {
+    ++other.m_ptr->ref_cnt;
+    if (--m_ptr->ref_cnt == 0)
+      delete m_ptr;
+    m_ptr = other.m_ptr;
+    return *this;
+  }
+};
+```
+
+---
+
+## Idea: Reference counting
+
+Destructor: decrement the counter, and destroy the object if the counter reaches zero.
+
+```cpp
+class SharedPtr {
+  CountedObject *m_ptr;
+ public:
+  ~SharedPtr() {
+    if (--m_ptr->ref_cnt == 0)
+      delete m_ptr;
+  }
+};
+```
+
+---
+
+## Idea: Reference counting
+
+Move: Just *steal* the object.
+
+```cpp
+class SharedPtr {
+  CountedObject *m_ptr;
+ public:
+  SharedPtr(SharedPtr &&other) noexcept
+      : m_ptr(other.m_ptr) { other.m_ptr = nullptr; }
+  SharedPtr &operator=(SharedPtr &&other) noexcept {
+    if (this != &other) {
+      if (--m_ptr->ref_cnt == 0)
+        delete m_ptr;
+      m_ptr = other.m_ptr; other.m_ptr = nullptr;
+    }
+    return *this;
+  }
+};
+```
+
+---
+
+## `std::shared_ptr`
+
+A smart pointer that uses **reference counting** to manage shared objects.
+
+Create a `shared_ptr`:
+
+```cpp
+std::shared_ptr<Type> sp2(new Type(args));
+auto sp = std::make_shared<Type>(args); // equivalent, but better
+```
+
+For example:
+
+```cpp
+auto sp = std::make_shared<std::string>(10, 'c');
+// sp points to a string "cccccccccc".
+```
+
+---
+
+## Create a `shared_ptr`
+
+Note: For `std::unique_ptr`, both of the following ways are ok (since C++17):
+
+```cpp
+auto up = std::make_unique<Type>(args);
+std::unique_ptr<Type> up2(new Type(args));
+```
+
+But for `std::shared_ptr`, **`std::make_shared` is preferable to directly using `new`**.
+
+```cpp
+auto sp = std::make_shared<Type>(args); // preferred
+std::shared_ptr<Type> sp2(new Type(args)); // ok, but less preferred
+```
+
+Read *Effective Modern C++* Item 21. (Note that this book is based on C++14.)
+
+---
+
+## Operations
+
+`*` and `->` can be used as if it is a raw pointer:
+
+```cpp
+auto sp = std::make_shared<std::string>(10, 'c');
+std::cout << *sp << std::endl; // cccccccccc
+std::cout << sp->size() << std::endl; // 10
+```
+
+`sp.use_count()`: The value of the reference counter.
+
+```cpp
+auto sp = std::make_shared<std::string>(10, 'c');
+{
+  auto sp2 = sp;
+  std::cout << sp.use_count() << std::endl; // 2
+} // sp2 is destroyed
+std::cout << sp.use_count() << std::endl; // 1
+```
+
+---
+
+## Operations
+
+Full list of members: [for shared_ptr](https://en.cppreference.com/w/cpp/memory/shared_ptr), [for unique_ptr](https://en.cppreference.com/w/cpp/memory/unique_ptr)
+
+Some functions that may be useful: `reset()`, `release()`, ...
+
+Notes:
+
+- Both of them support `.get()`, which returns a raw pointer to the managed object.
+  - This is useful when some old interfaces only accept raw pointers, e.g. `glfwSwapBuffers`.
+- Be careful! Mixing the usage of raw pointers and smart pointers can lead to disaster!
+  ```cpp
+  delete up.get(); // disaster
+  ```
+
+---
+
+## Deleters and allocators
+
+Customized *deleters* are supported on `unique_ptr` and `shared_ptr`.
+
+`shared_ptr` also allows customized allocators.
+
+We will talk about how to define such things in later lectures.
