@@ -417,6 +417,27 @@ class DiscountedItem : public Item {
 
 ---
 
+## Usage with smart pointers
+
+Smart pointers are implemented by wrapping the raw pointers, so they can also be used for dynamic binding.
+
+```cpp
+std::vector<std::shared_ptr<Item>> myItems;
+for (auto i = 0; i != n; ++i) {
+  if (someCondition) {
+    myItems.push_back(std::make_shared<Item>(someParams));
+  } else {
+    myItems.push_back(std::make_shared<DiscountedItem>(someParams));
+  }
+}
+```
+
+`std::unique_ptr<Base>` can accept a `std::unique_ptr<Derived>`.
+
+`std::shared_ptr<Base>` can accept a `std::shared_ptr<Derived>`.
+
+---
+
 ## Copy-control
 
 Remember to copy/move the base subobject! One possible way:
