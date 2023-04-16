@@ -319,7 +319,7 @@ Since `netPrice` is a `virtual` function, which version is called is also determ
 
 ## `virtual`-`override`
 
-To **override** a `virtual` function,
+To **override** (覆盖/覆写) a `virtual` function,
 - The function parameter list must be the same as that of the base class's version.
 - The return type should be either **identical to** or **covariant with** that of the corresponding function in the base class.
   - We will talk about "covariant with" in later lectures or recitations.
@@ -327,7 +327,7 @@ To **override** a `virtual` function,
 
 To make sure you are truly overriding the `virtual` function (instead of making a overloaded version), use the `override` keyword.
 
-**\* Not to be confused with "overloading".**
+**\* Not to be confused with "overloading"（重载）.**
 
 ---
 
@@ -414,3 +414,80 @@ class DiscountedItem : public Item {
   }
 };
 ```
+
+---
+
+## Copy-control
+
+Remember to copy/move the base subobject! One possible way:
+
+```cpp
+class Derived : public Base {
+ public:
+  Derived(const Derived &other)
+    : Base(other), /* Derived's own members */ { /* ... */ }
+  Derived &operator=(const Derived &other) {
+    Base::operator=(other); // call Base's operator= explicitly
+    // copy Derived's own members
+    return *this;
+  }
+  // ...
+};
+```
+
+Why `Base(other)` and `Base::operator=(other)` work?
+
+- The parameter type is `const Base &`, which can be bound to a `Derived` object.
+
+---
+
+## Synthesized copy-control members
+
+Guess!
+
+- What are the behaviors of the compiler-generated copy-control members?
+- In what cases will they be `delete`d?
+
+---
+
+## Synthesized copy-control members
+
+Remeber that the base class's subobject is always handled first.
+
+These rules should be natural.
+
+- What are the behaviors of the compiler-generated copy-control members?
+  - First, calls the base class's corresponding copy-control member.
+  - Then, performs the corresponding operation on the derived class's own data members.
+- In what cases will they be `delete`d?
+  - If the base class's corresponding copy-control member is not accessible (e.g. non-existent, or `private`),
+  - or if any of the data members' corresponding copy-control member is not accessible.
+
+---
+
+## Slicing
+
+Dynamic binding only happens on references or pointers to base class.
+
+```cpp
+DiscountedItem di("A", 10, 2, 0.8);
+Item i = di; // What happens?
+auto x = i.netPrice(3); // Which netPrice?
+```
+
+---
+
+## Slicing
+
+Dynamic binding only happens on references or pointers to base class.
+
+```cpp
+DiscountedItem di("A", 10, 2, 0.8);
+Item i = di; // What happens?
+auto x = i.netPrice(3); // Which netPrice?
+```
+
+`Item i = di;` calls the **copy ctor of `Item`**
+- but `Item`'s copy ctor handles only the base part.
+- So `DiscountedItem`'s own members are **ignored**, or **"sliced down"**.
+- `i.netPrice(3)` calls `Item::netPrice`.
