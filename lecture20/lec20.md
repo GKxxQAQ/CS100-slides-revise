@@ -512,3 +512,145 @@ auto x = i.netPrice(3); // Which netPrice?
 - but `Item`'s copy ctor handles only the base part.
 - So `DiscountedItem`'s own members are **ignored**, or **"sliced down"**.
 - `i.netPrice(3)` calls `Item::netPrice`.
+
+---
+
+## Downcasting
+
+```cpp
+Base *bp = new Derived{};
+```
+
+If we only have a `Base` pointer, but we are quite sure that it points to a `Derived` object
+- Accessing the members of `Derived` through `bp` is not allowed.
+- How can we perform a **"downcasting"**?
+
+---
+
+## Polymorphic class
+
+A class is said to be **polymorphic** if it has (declares or inherits) at least one virtual function.
+
+- Either a `virtual` normal member function or a `virtual` dtor is ok.
+
+If a class is polymorphic, all classes derived from it are polymorphic.
+
+- There is no way to "refuse" to inherit any member functions, so `virtual` member functions must be inherited.
+- The dtor must be `virtual` if the dtor of the base class is `virtual`.
+
+---
+
+## Downcasting: For polymorphic class only
+
+`dynamic_cast<Target>(expr)`.
+
+```cpp
+Base *bp = new Derived{};
+Derived *dp = dynamic_cast<Derived *>(bp);
+Derived &dr = dynamic_cast<Derived &>(*bp);
+```
+
+- `Target` must be a **reference** or a **pointer** type.
+- `dynamic_cast` will perform **runtime type identification (RTTI)** to check the dynamic type of the expression.
+  - If the dynamic type is `Derived`, or a derived class (direct or indirect) of `Derived`, the downcasting succeeds.
+  - Otherwise, the downcasting fails. If `Target` is a pointer, returns a null pointer. If `Target` is a reference, throws an exception `std::bad_cast`.
+
+---
+
+## `dynamic_cast` can be very slow
+
+`dynamic_cast` performs a runtime **check** to see whether the downcasting should succeed, which uses runtime type information.
+
+This is **much slower** than other types of casting, e.g. `const_cast`, or arithmetic conversions.
+
+### Guaranteed successful downcasting: Use `static_cast`.
+
+If the downcasting is guaranteed to be successful, you may use `static_cast`
+
+```cpp
+auto dp = static_cast<Derived *>(bp); // quicker than dynamic_cast,
+// but performs no checks. If the dynamic type is not Derived, UB.
+```
+
+---
+
+## Avoiding `dynamic_cast`
+
+Typical abuse of `dynamic_cast`:
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+```cpp
+struct A {
+  virtual ~A() {}
+};
+struct B : A {};
+struct C : A {};
+```
+  </div>
+  <div>
+
+```cpp
+std::string getType(const A *ap) {
+  if (dynamic_cast<const B *>(ap))
+    return "B";
+  else if (dynamic_cast<const C *>(ap))
+    return "C";
+  else
+    return "A";
+}
+```
+  </div>
+</div>
+
+Click here to see how large and slow the generated code is: https://godbolt.org/z/3367efGd7
+
+---
+
+## Avoiding `dynamic_cast`
+
+Use a group of `virtual` functions!
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+```cpp
+struct A {
+  virtual ~A() {}
+  virtual std::string name() const {
+    return "A";
+  }
+};
+struct B : A {
+  virtual std::string name() const override {
+    return "B";
+  }
+};
+struct C : A {
+  virtual std::string name() const override {
+    return "C";
+  }
+};
+```
+  </div>
+  <div>
+
+```cpp
+auto getType(const A *ap) {
+  return ap->name();
+}
+```
+
+- This time: https://godbolt.org/z/KosbcaGnT
+  
+  The generated code is much simpler!
+  </div>
+</div>
+
+---
+
+# Abstract base class
+
+---
+
