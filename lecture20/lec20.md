@@ -857,6 +857,45 @@ However, **a good design should make errors fail to compile**.
 
 ---
 
+## Polymorphism (多态)
+
+Polymorphism: The provision of a single interface to entities of different types, or the use of a single symbol to represent multiple different types.
+
+- Run-time polymorphism: Achieved via **dynamic binding**.
+- Compile-time polymorphism: Achieved via **function overloading**, **templates**, **concepts (since C++20)**, etc.
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+Run-time polymorphism:
+
+```cpp
+struct Shape {
+  virtual void draw() const = 0;
+};
+void drawStuff(const Shape &s) {
+  s.draw();
+}
+```
+  </div>
+  <div>
+
+Compile-time polymorphism:
+
+```cpp
+template <typename T>
+concept Shape = requires(const T x) {
+  x.draw();
+};
+void drawStuff(Shape const auto &s) {
+  s.draw();
+}
+```
+  </div>
+</div>
+
+---
+
 ## Reading materials
 
 *Effective C++* Item 32: Make sure public inheritance models "is-a".
