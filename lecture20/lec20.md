@@ -854,3 +854,11 @@ If `Shape::area` is called accidentally, an exception will be raised.
 However, **a good design should make errors fail to compile**.
 
 **If an error can be caught in compile-time, don't leave it until run-time**.
+
+---
+
+## Reading materials
+
+*Effective C++* Item 32: Make sure public inheritance models "is-a".
+
+*Effective C++* Item 34: Differentiate between inheritance of interface and inheritance of implementation.
