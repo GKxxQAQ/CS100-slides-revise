@@ -147,7 +147,7 @@ Rational operator-(const Rational &lhs, const Rational &rhs) {
 class Rational {
   friend Rational operator-(const Rational &);
  public:
-  Rational operator+=(const Rational &rhs) {
+  Rational &operator+=(const Rational &rhs) {
     m_num = m_num * static_cast<int>(rhs.m_denom) // Be careful with unsigned
             + static_cast<int>(m_denom) * rhs.m_num;
     m_denom *= rhs.m_denom;
@@ -249,7 +249,7 @@ What if we define them (say, `operator==`) as member functions?
 class Rational {
  public:
   Rational(int x = 0) : m_num{x}, m_denom{1} {}
-  Rational operator==(const Rational &rhs) const {
+  bool operator==(const Rational &rhs) const {
     return m_num == rhs.m_num && m_denom == rhs.m_denom;
   }
 };
@@ -265,7 +265,7 @@ What if we define them (say, `operator==`) as member functions?
 class Rational {
  public:
   Rational(int x = 0) : m_num{x}, m_denom{1} {}
-  Rational operator==(const Rational &rhs) const {
+  bool operator==(const Rational &rhs) const {
     return m_num == rhs.m_num && m_denom == rhs.m_denom;
   }
 };
