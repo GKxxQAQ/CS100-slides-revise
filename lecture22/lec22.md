@@ -14,7 +14,6 @@ Standard Template Library (STL)
 - Overview
 - Sequence containers and iterators
 - Algorithms and function objects (aka "functors")
-- More on iterators
 - Associative containers
 
 ---
@@ -156,7 +155,7 @@ Note: `string` is not treated as a container but behaves much like one.
   <img src="img/vector.png", width=400>
 </a>
 
-- `std::deque<T>`: **D**ouble-**E**nded **Que**ue (often pronounced as "deck")
+- `std::deque<T>`: **d**ouble-**e**nded **que**ue (often pronounced as "deck")
   - `std::deque<T>` supports fast insertion and deletion **at both its beginning and its end**. (`push_front`, `pop_front`, `push_back`, `pop_back`)
 
 <a align="center">
@@ -235,5 +234,223 @@ Modifiers:
 
 ---
 
+## Interfaces
+
+Some of these member functions are not supported on some containers, **depending on the underlying data structure**. For example:
+- Any operation that modifies the length of the container is not allowed for `array`.
+- `push_front`, `emplace_front` and `pop_front` are not supported on `string`, `vector` and `array`.
+- `size` is not supported on `forward_list` in order to save time and space.
+- `operator[]` and `at` are not supported on linked-lists.
+
+[This table](https://en.cppreference.com/w/cpp/container#Member_function_table) tells you everything.
+
+---
+
 ## Iterators
 
+A generalized "pointer" used for accessing elements in different containers.
+
+Every container has its iterator: `Container::iterator`. e.g. `std::vector<int>::iterator`, `std::forward_list<std::string>::iterator`
+
+- `auto` comes to our rescue!
+
+`c.begin()` returns the iterator to the first element of `c`.
+
+`c.end()` returns the iterator to **the element following the last element** of `c`.
+
+<a align="center">
+  <img src="img/range-begin-end.svg", width=800>
+</a>
+
+---
+
+## Iterators
+
+A pair of iterators (`b`, `e`) is often used to indicate a range `[b, e)`.
+
+Such ranges are **left-inclusive**. Benefits:
+
+- `e - b` is the **length** of the range, i.e. the number of elements. There is no extra `+1` or `-1`.
+- If `b == e`, the range is empty.
+
+---
+
+## Iterators
+
+Basic operations, supported by almost all kinds of iterators:
+
+- `*it`: returns a reference to the element that `it` refers to.
+- `it->mem`: equivalent to `(*it).mem`.
+- `++it`, `it++`: moves `it` one step forward, so that `it` refers to the "next" element.
+  - `++it` returns a reference to `it`, while `it++` returns a copy of `it` before incrementation.
+- `it1 == it2`: checks whether `it1` and `it2` refer to the same position in the container.
+- `it1 != it2`: equivalent to `!(it1 == it2)`.
+
+These are supported by the iterators of all sequence containers, as well as `string`.
+
+---
+
+## Iterators
+
+Use the basic operations to traverse a sequence container:
+
+```cpp
+void swapcase(std::string &str) {
+  for (auto it = str.begin(); it != str.end(); ++it) {
+    if (std::islower(*it))
+      *it = std::toupper(*it);
+    else if (std::isupper(*it))
+      *it = std::tolower(*it);
+  }
+}
+void print(const std::list<int> &lst) {
+  for (auto it = lst.begin(); it != lst.end(); ++it)
+    std::cout << *it << ' ';
+}
+```
+
+---
+
+## Iterators
+
+**Built-in pointers are also iterators**: They are the iterator for built-in arrays.
+
+For an array `Type a[N]`:
+
+- The "begin" iterator is `a`.
+- The "end" (off-the-end) iterator is `a + N`.
+
+The standard library functions `std::begin(c)` and `std::end(c)` (defined in `<iterator>` and many other header files):
+
+- return `c.begin()` and `c.end()` if `c` is a container;
+- return `c` and `c + N` if `c` is an array of length `N`.
+
+---
+
+## Range-for demystified
+
+The range-based for loop
+
+```cpp
+for (@declaration : container)
+  @loop_body
+```
+
+is equivalent to 
+
+```cpp
+{
+  auto b = std::begin(container);
+  auto e = std::end(container);
+  for (; b != e; ++b) {
+    @declaration = *b;
+    @loop_body
+  }
+}
+```
+
+---
+
+## Iterators: dereferenceable
+
+Like pointers, an iterator can be dereferenced (`*it`) only when it refers to an existing element. (**"dereferenceable"**)
+
+- `*v.end()` is undefined behavior.
+- `++it` is undefined behavior if `it` is not dereferenceable. In other words, moving an iterator out of the range `[begin, off_the_end]` is undefined behavior.
+
+---
+
+## Iterators: invalidation
+
+```cpp
+Type *storage = new Type[n];
+Type *iter = storage;
+delete[] storage;
+// Now `iter` does not refer to any existing element.
+```
+
+Some operations on some containers will **invalidate** some iterators:
+- make these iterators not refer to any existing element.
+
+For example:
+- `push_back(x)` on a `vector` may cause the reallocation of storage. All iterators obtained previously are invalidated.
+- Deleting an element in a `list` will invalidate the iterator referring to that element.
+
+---
+
+## More operations on iterators
+
+The iterators of containers that support `*it`, `it->mem`, `++it`, `it++`, `it1 == it2` and `it1 != it2` are [**ForwardIterators**](https://en.cppreference.com/w/cpp/named_req/ForwardIterator).
+
+[**BidirectionalIterator**](https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator): a ForwardIterator that can be moved in both directions
+- supports `--it` and `it--`.
+
+[**RandomAccessIterator**](https://en.cppreference.com/w/cpp/named_req/RandomAccessIterator): a BidirectionalIterator that can be moved to point to any element in constant time.
+- supports `it + n`, `n + it`, `it - n`, `it += n`, `it -= n` for an integer `n`.
+- supports `it[n]`, equivalent to `*(it + n)`.
+- supports `it1 - it2`, returns the **distance** of two iterators.
+- supports `<`, `<=`, `>`, `>=`.
+
+---
+
+## Iterator categories
+
+[**ForwardIterators**](https://en.cppreference.com/w/cpp/named_req/ForwardIterator): supports `*it`, `it->mem`, `++it`, `it++`, `it1 == it2`, `it1 != it2`
+
+[**BidirectionalIterator**](https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator): a ForwardIterator that can be moved in both directions
+- supports `--it` and `it--`.
+
+[**RandomAccessIterator**](https://en.cppreference.com/w/cpp/named_req/RandomAccessIterator): a BidirectionalIterator that can be moved to point to any element in constant time.
+- supports `it + n`, `n + it`, `it - n`, `it += n`, `it -= n` for an integer `n`.
+- supports `it[n]`, equivalent to `*(it + n)`.
+- supports `it1 - it2`, returns the **distance** of two iterators.
+- supports `<`, `<=`, `>`, `>=`.
+
+**\* Which category is the built-in pointer in?**
+
+---
+
+## Iterator categories
+
+[**ForwardIterators**](https://en.cppreference.com/w/cpp/named_req/ForwardIterator): supports `*it`, `it->mem`, `++it`, `it++`, `it1 == it2`, `it1 != it2`
+
+[**BidirectionalIterator**](https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator): a ForwardIterator that can be moved in both directions
+- supports `--it` and `it--`.
+
+[**RandomAccessIterator**](https://en.cppreference.com/w/cpp/named_req/RandomAccessIterator): a BidirectionalIterator that can be moved to point to any element in constant time.
+- supports `it + n`, `n + it`, `it - n`, `it += n`, `it -= n` for an integer `n`.
+- supports `it[n]`, equivalent to `*(it + n)`.
+- supports `it1 - it2`, returns the **distance** of two iterators.
+- supports `<`, `<=`, `>`, `>=`.
+
+**\* Which category is the built-in pointer in?** - RandomAccessIterator.
+
+---
+
+## Iterator categories
+
+[**ForwardIterators**](https://en.cppreference.com/w/cpp/named_req/ForwardIterator): an iterator that can be moved forward.
+- `forward_list<T>::iterator`
+
+[**BidirectionalIterator**](https://en.cppreference.com/w/cpp/named_req/BidirectionalIterator): a ForwardIterator that can be moved in both directions
+- `list<T>::iterator`
+
+[**RandomAccessIterator**](https://en.cppreference.com/w/cpp/named_req/RandomAccessIterator): a BidirectionalIterator that can be moved to point to any element in constant time.
+- `string::iterator`, `vector<T>::iterator`, `deque<T>::iterator`, `array<T,N>::iterator`
+
+---
+
+## Iterator categories
+
+To know the category of an iterator of a container, consult its type alias member `iterator_category`.
+
+```cpp
+using vec_iter = std::vector<int>::iterator;
+using category = vec_iter::iterator_category;
+```
+
+Put your mouse on `category`, and the IDE will tell you what it is.
+
+It is one of the following tags: `std::forward_iterator_tag`, `std::bidirectional_iterator_tag`, `std::random_access_iterator_tag`.
+
+Note: There are two other categories: InputIterator and OutputIterator. They may (or may not) be covered in later lectures.
