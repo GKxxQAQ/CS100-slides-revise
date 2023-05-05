@@ -115,7 +115,7 @@ std::reverse(c.begin(), c.end());
 
 ## [Algorithms](https://en.cppreference.com/w/cpp/algorithm)
 
-Example: Map every number in `data` to its rank. (OI 中常说的“离散化”)
+Example: Map every number in `data` to its rank. (“离散化”)
 
 ```cpp
 auto remap(const std::vector<int> &data) {
@@ -143,6 +143,8 @@ More in later lectures ...
 ---
 
 # Sequence containers and iterators
+
+Note: `string` is not treated as a container but behaves much like one.
 
 ---
 
@@ -187,3 +189,51 @@ More in later lectures ...
 </a>
 
 ---
+
+## Interfaces
+
+STL containers have consistent interfaces. See [here](https://en.cppreference.com/w/cpp/container#Member_function_table) for a full list.
+
+Element access:
+
+- `c.at(i)`, `c[i]`: access the element indexed `i`. `at` performs bounds checking, and throws `std::out_of_range` if `i` exceeds the valid range.
+- `c.front()`, `c.back()`: access the front/back element.
+
+---
+
+## Interfaces
+
+Size and capacity: `c.size()` and `c.empty()` are what we already know.
+
+- `c.resize(n)`, `c.resize(n, x)`: adjust the container to be with exactly `n` elements. If `n > c.size()`, `n - c.size()` elements will be appended.
+  - `c.resize(n)`: Appended elements are **value-initialized**.
+  - `c.resize(n, x)`: Appended elements are copies of `x`.
+- `c.capacity()`, `c.reserve(n)`, `c.shrink_to_fit()`: only for `string` and `vector`.
+  - `c.capacity()` returns the capacity (number of elements that *can* be stored in the current storage)
+  - `c.reserve(n)`: reserves space for at least `n` elements.
+  - `c.shrink_to_fit()`: requests to remove the unused capacity, so that `c.capacity() == c.size()`.
+
+---
+
+## Interfaces
+
+Modifiers:
+
+- `c.push_back(x)`, `c.emplace_back(args...)`, `c.pop_back()`: insert/delete elements at the end of the container.
+- `c.push_front(x)`, `c.emplace_front(args...)`, `c.pop_front()`: insert/delete elements at the beginning of the container.
+- `c.clear()` removes all the elements in `c`.
+
+---
+
+## Interfaces
+
+Modifiers:
+
+- `c.insert(...)`, `c.emplace(...)`, `c.erase(...)`: insert/delete elements at a specified location.
+  - **Warning**: For containers that need to maintain contiguous storage (`string`, `vector`, `deque`), insertion and deletion somewhere in the middle can be **very slow** ($O(n)$).
+  - These functions have a lot of overloads. Remember a few common ones, and STFW (Search The Friendly Web) when you need to use them.
+
+---
+
+## Iterators
+
