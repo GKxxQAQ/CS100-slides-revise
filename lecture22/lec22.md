@@ -53,20 +53,39 @@ Added into C++ in 1994.
 ## Sequence containers
 
 - `std::vector<T>`: dynamic contiguous array (we are quite familiar with)
+
+<a align="center">
+  <img src="img/vector.png", width=400>
+</a>
+
 - `std::deque<T>`: **D**ouble-**E**nded **Que**ue (often pronounced as "deck")
   - `std::deque<T>` supports fast insertion and deletion **at both its beginning and its end**. (`push_front`, `pop_front`, `push_back`, `pop_back`)
-- `std::list<T>`: doubly-linked list
-  - `std::list<T>` supports fast insertion and deletion **anywhere in the container**,
-  - but fast random access is not supported (i.e. no `operator[]`).
-  - Bidirectional traversal is supported.
+
+<a align="center">
+  <img src="img/deque.png", width=400>
+</a>
+
+- `std::array<T, N>`: same as `T[N]`, it is a **container**
+  - It will never decay to `T *`.
+  - Container interfaces are provided: `.at(i)`, `.front()`, `.back()`, `.size()`, ..., as well as iterators.
 
 ---
 
 ## Sequence containers
 
+- `std::list<T>`: doubly-linked list
+  - `std::list<T>` supports fast insertion and deletion **anywhere in the container**,
+  - but fast random access is not supported (i.e. no `operator[]`).
+  - Bidirectional traversal is supported.
+
+<a align="center">
+  <img src="img/list.png", width=400>
+</a>
+
 - `std::forward_list<T>`: singly-linked list
   - Intended to save time and space (compared to `std::list`).
   - Only forward traversal is supported.
-- `std::array<T, N>`: same as `T[N]`, it is a **container**
-  - It will never decay to `T *`.
-  - Container interfaces are provided: `.at(i)`, `.front()`, `.back()`, `.size()`, ..., as well as iterators.
+
+<a align="center">
+  <img src="img/forward_list.png", width=400>
+</a>
