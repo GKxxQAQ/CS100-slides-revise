@@ -12,7 +12,7 @@ math: mathjax
 Standard Template Library (STL)
 
 - Overview
-- Sequential containers and iterators
+- Sequence containers and iterators
 - Algorithms and function objects (aka "functors")
 - More on iterators
 - Associative containers
@@ -47,6 +47,102 @@ Added into C++ in 1994.
 - Container adapters: provide a different interface for sequential containers, but they are not containers themselves.
   - `stack`, `queue`, `priority_queue`
   - (since C++23) `flat_set`, `flat_map`, `flat_multiset`, `flat_multimap`
+
+---
+
+## [Iterators](https://en.cppreference.com/w/cpp/iterator)
+
+### Without iterators:
+
+- Traverse an array
+  ```cpp
+  for (int i = 0; i != sizeof(a) / sizeof(a[0]); ++i)
+    do_something(a[i]);
+  ```
+- Traverse a `vector`
+  ```cpp
+  for (std::size_t i = 0; i != v.size(); ++i)
+    do_something(v[i]);
+  ```
+- Traverse a linked-list?
+  ```cpp
+  for (ListNode *p = l.head(); p; p = p->next)
+    do_something(p->data);
+  ```
+
+---
+
+## [Iterators](https://en.cppreference.com/w/cpp/iterator)
+
+A generalization of pointers, used to access elements in different containers **in a uniform manner**.
+
+### With iterators:
+
+The following works no matter whether `c` is an array, a `std::string`, or any container.
+
+```cpp
+for (auto it = std::begin(c); it != std::end(c); ++it)
+  do_something(*it);
+```
+
+**Equivalent way: range-based for loops**
+
+```cpp
+for (auto &x : c) do_something(x);
+```
+
+---
+
+## [Algorithms](https://en.cppreference.com/w/cpp/algorithm)
+
+The algorithms library defines functions for a variety of purposes:
+- searching, sorting, counting, manipulating, ...
+
+Examples:
+
+```cpp
+// assign every element in `a` with the value `x`.
+std::fill(a.begin(), a.end(), x);
+// sort the elements in `b` in ascending order.
+std::sort(b.begin(), b.end());
+// find the first element in `b` that is equal to `x`.
+auto pos = std::find(b.begin(), b.end(), x);
+// reverse the elements in `c`.
+std::reverse(c.begin(), c.end());
+```
+
+---
+
+## [Algorithms](https://en.cppreference.com/w/cpp/algorithm)
+
+Example: Map every number in `data` to its rank. (OI 中常说的“离散化”)
+
+```cpp
+auto remap(const std::vector<int> &data) {
+  auto tmp = data;
+  std::sort(tmp.begin(), tmp.end()); // sort
+  auto pos = std::unique(tmp.begin(), tmp.end()); // drop duplicates
+  auto ret = data;
+  for (auto &x : ret)
+    x = std::lower_bound(tmp.begin(), pos, x) - tmp.begin(); // binary search
+  return ret;
+}
+```
+
+---
+
+## Function objects
+
+Things that look like "functions": *Callable*
+- functions, and also function pointers
+- objects of a class type that has an overloaded `operator()` (the function-call operator)
+- lambda expressions
+
+More in later lectures ...
+
+---
+
+# Sequence containers and iterators
 
 ---
 
@@ -89,3 +185,5 @@ Added into C++ in 1994.
 <a align="center">
   <img src="img/forward_list.png", width=400>
 </a>
+
+---
