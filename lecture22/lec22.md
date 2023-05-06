@@ -454,3 +454,206 @@ Put your mouse on `category`, and the IDE will tell you what it is.
 It is one of the following tags: `std::forward_iterator_tag`, `std::bidirectional_iterator_tag`, `std::random_access_iterator_tag`.
 
 Note: There are two other categories: InputIterator and OutputIterator. They may (or may not) be covered in later lectures.
+
+---
+
+## Constructors of containers
+
+All sequence containers can be constructed in the following ways:
+
+- `Container c(b, e)`, where `[b, e)` is an **iterator range**.
+  - Copies elements from the iterator range `[b, e)`.
+- `Container c(n, x)`, where `n` is a nonnegative integer and `x` is a value.
+  - Initializes the container with `n` copies of `x`.
+- `Container c(n)`, where `n` is a nonnegative integer.
+  - Initializes the container with `n` elements. All elements are **value-initialized**.
+  - This is not supported by `string`. (Why?)
+
+---
+
+## Constructors of containers
+
+All sequence containers can be constructed in the following ways:
+
+- `Container c(b, e)`, where `[b, e)` is an **iterator range**.
+  - Copies elements from the iterator range `[b, e)`.
+- `Container c(n, x)`, where `n` is a nonnegative integer and `x` is a value.
+  - Initializes the container with `n` copies of `x`.
+- `Container c(n)`, where `n` is a nonnegative integer.
+  - Initializes the container with `n` elements. All elements are **value-initialized**.
+  - This is not supported by `string`, because it is meaningless to have `n` value-initializes `char`s (all of them will be `'\0'`)!
+
+---
+
+# Algorithms and function objects
+
+---
+
+## Algorithms
+
+Full list of standard library algorithms can be found [here](https://en.cppreference.com/w/cpp/algorithm).
+
+No one can remember all of them, but some are quite commonly used.
+
+---
+
+## Algorithms: interfaces
+
+**Parameters**: The STL algorithms accept pairs of iterators to represent "ranges":
+
+```cpp
+int a[N], b[N]; std::vector<int> v;
+std::sort(a, a + N);
+std::sort(v.begin(), v.end());
+std::copy(a, a + N, b); // copies elements in [a, a+N) to [b, b+N)
+std::sort(v.begin(), v.begin() + 10); // Only the first 10 elements are sorted.
+```
+
+(since C++20) `std::ranges::xxx` can be used, which has more modern interfaces
+
+```cpp
+std::ranges::sort(a);
+std::ranges::copy(a, b);
+```
+
+---
+
+## Algorithms: interfaces
+
+**Parameters**: The algorithms suffixed `_n` use **a beginning iterator `begin` and an integer `n` to represent a range `[begin, begin + n)`**.
+
+Example: Use STL algorithms to rewrite the constructors of `Dynarray`:
+
+```cpp
+Dynarray::Dynarray(const int *begin, const int *end)
+    : m_storage{new int[end - begin]}, m_length{end - begin} {
+  std::copy(begin, end, m_storage);
+}
+Dynarray::Dynarray(const Dynarray &other)
+    : m_storage{new int[other.size()]}, m_length{other.size()} {
+  std::copy_n(other.m_storage, other.size(), m_storage);
+}
+Dynarray::Dynarray(std::size_t n, int x = 0)
+    : m_storage{new int[n]}, m_length{n} {
+  std::fill_n(m_storage, m_length, x);
+}
+```
+
+---
+
+## Algorithms: interfaces
+
+**Return values**: "Position" is represented by an iterator. For example:
+
+```cpp
+std::vector<int> v = someValues();
+auto pos = std::find(v.begin(), v.end(), 42);
+assert(*pos == 42);
+auto maxPos = std::max_element(v.begin(), v.end());
+```
+
+- `pos` is an **iterator** pointing to the first occurrence of `42` in `v`.
+- `maxPos` is an **iterator** pointing to the max element in `v`.
+
+---
+
+## Algorithms: requirements
+
+An algorithm may have **requirements** on
+- the iterator categories of the passed-in iterators, and
+- the type of elements that the iterators point to.
+
+Typically, `std::sort` requires *RandomAccessIterator*s, while `std::copy` allows any *InputIterator*s.
+
+Typically, all algorithms that need to compare elements rely only upon `operator<` and `operator==` of the elements.
+- You don't have to define all the six comparison operators of `X` in order to `sort` a `vector<X>`. `sort` only requires `operator<`.
+
+---
+
+## Algorithms
+
+Since we pass **iterators** instead of **containers** to algorithms, **the standard library algorithms never modify the length of the containers**.
+
+- STL algorithms never insert or delete elements in the containers (unless the iterator passed to them is some special *iterator adapter*).
+
+For example: `std::copy` only **copies** elements, instead of inserting elements.
+
+```cpp
+std::vector<int> a = someValues();
+std::vector<int> b(a.size());
+std::vector<int> c{};
+std::copy(a.begin(), a.end(), b.begin()); // OK
+std::copy(a.begin(), a.end(), c.begin()); // Undefined behavior!
+```
+
+---
+
+## Some common algorithms (`<algorithm>`)
+
+Non-modifying sequence operations:
+
+- `count(begin, end, x)`, `find(begin, end, x)`, `find_end(begin, end, x)`, `find_first_of(begin, end, x)`, `search(begin, end, pattern_begin, pattern_end)`
+
+Modifying sequence operations:
+
+- `copy(begin, end, dest)`, `fill(begin, end, x)`, `reverse(begin, end)`, ...
+- `unique(begin, end)`: drop duplicate elements.
+  - requires the elements in the range `[begin, end)` to be **sorted** (in ascending order by default).
+  - **It does not remove any elements!** Instead, it moves all the duplicated elements to the end of the sequence, and returns an iterator `pos`, so that `[begin, pos)` has no duplicate elements.
+
+---
+
+## Some common algorithms (`<algorithm>`)
+
+Example: `unique`
+
+```cpp
+std::vector v{1, 1, 2, 2, 2, 3, 5};
+auto pos = std::unique(v.begin(), v.end());
+// Now [v.begin(), pos) holds {1, 2, 3, 5},
+// and [pos, v.end()) holds {1, 2, 2}, but the exact order is not known.
+v.erase(pos, v.end()); // Typical use with the container's `erase` operation
+// Now v holds {1, 2, 3, 5}.
+```
+
+`unique` does not remove the duplicate elements! To remove them, use the container's `erase` operation.
+
+---
+
+## Some common algorithms (`<algorithm>`)
+
+Partitioning, sorting and merging algorithms:
+
+- `partition`, `is_partitioned`, `stable_partition`
+- `sort`, `is_sorted`, `stable_sort`
+- `nth_element`
+- `merge`, `inplace_merge`
+
+Binary search on sorted ranges:
+
+- `lower_bound`, `upper_bound`, `binary_search`, `equal_range`
+
+Heap algorithms:
+
+- `is_heap`, `make_heap`, `push_heap`, `pop_heap`, `sort_heap`
+
+Learn the underlying algorithms and data structures of these functions in CS101!
+
+---
+
+## Some common algorithms
+
+Min/Max and comparison algorithms: (`<algorithm>`)
+
+- `min_element(begin, end)`, `max_element(begin, end)`, `minmax_element(begin, end)`
+- `equal(begin1, end1, begin2)`, `equal(begin1, end1, begin2, end2)`
+- `lexicographical_compare(begin1, end1, begin2, end2)`
+
+Numeric operations: (`<numeric>`)
+
+- `accumulate(begin, end, initValue)`: Sum of elements in `[begin, end)`, with initial value `initValue`.
+  - `accumulate(v.begin(), v.end(), 0)` returns the sum of elements in `v`.
+- `inner_product(begin1, end1, begin2, initValue)`: Inner product of two vectors $\mathbf{a}^T\mathbf{b}$, added with the initial value `initValue`.
+
+---
+
