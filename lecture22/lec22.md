@@ -846,13 +846,11 @@ std::sort(v.begin(), v.end(),
 ```
 
 ```cpp
-std::sort(v.begin(), v.end(),
-          [](int a, int b) { return a > b; });
+std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });
 ```
 
 ```cpp
-auto pos = std::find_if(v.begin(), v.end(),
-                        [k](int x) { return x < k; });
+auto pos = std::find_if(v.begin(), v.end(), [k](int x) { return x < k; });
 ```
 
 ---
