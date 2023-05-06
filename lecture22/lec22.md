@@ -919,9 +919,7 @@ Here `&str` indicates that `str` is captured by referece. **`&` here is not the 
 
 ---
 
-## Lambda expressions: capture
-
-More on lambda expressions:
+## More on lambda expressions
 
 - *C++ Primer* Section 10.3
 - *Effective Modern C++* Chapter 6 (Item 31-34)
@@ -929,3 +927,25 @@ More on lambda expressions:
 Note that *C++ Primer (5th edition)* is based on C++11 and *Effective Modern C++* is based on C++14. Lambda expressions are evolving at a very fast pace in modern C++, with many new things added and many limitations removed.
 
 More fancy ways of writing lambda expressions are not covered in CS100.
+
+---
+
+## Back to algorithms
+
+So many things in the algorithm library! How can we remember them?
+
+- Remember the **conventions**:
+  - No insertion/deletion of elements
+  - Iterator range `[begin, end)`
+  - Functions named with the suffix `_n` uses `[begin, begin + n)`
+  - Pass functions, function objects, and lambdas for customized operations
+  - Functions named with the suffix `_if` requires a boolean predicate
+- Remember the common ones: `copy`, `find`, `for_each`, `sort`, ...
+- Look them up in [cppreference](https://en.cppreference.com/w/cpp/algorithm) before use.
+
+---
+
+# Associative containers
+
+---
+
