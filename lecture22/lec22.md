@@ -543,7 +543,7 @@ Dynarray::Dynarray(std::size_t n, int x = 0)
 
 ## Algorithms: interfaces
 
-**Return values**: "Position" is represented by an iterator. For example:
+**Return values**: "Position" is typically represented by an iterator. For example:
 
 ```cpp
 std::vector<int> v = someValues();
@@ -554,6 +554,8 @@ auto maxPos = std::max_element(v.begin(), v.end());
 
 - `pos` is an **iterator** pointing to the first occurrence of `42` in `v`.
 - `maxPos` is an **iterator** pointing to the max element in `v`.
+
+"Not found"/"No such element" is often indicated by returning `end`.
 
 ---
 
@@ -657,3 +659,275 @@ Numeric operations: (`<numeric>`)
 
 ---
 
+## Predicates
+
+Consider the `Point2d` class:
+
+```cpp
+struct Point2d {
+  double x, y;
+};
+std::vector<Point2d> points = someValues();
+```
+
+Suppose we want to sort `points` in ascending order of the `x` coordinate.
+
+- `std::sort` requires `operator<` in order to compare the elements,
+- but it is not recommended to overload `operator<` here! (What if we want to sort some `Point2d`s in another way?)
+
+(C++20 modern way: `std::ranges::sort(points, {}, &Point2d::x);`)
+
+---
+
+## Predicates
+
+`std::sort` has another version that accepts another argument `cmp`:
+
+```cpp
+bool cmp_by_x(const Point2d &lhs, const Point2d &rhs) {
+  return lhs.x < rhs.x;
+}
+std::sort(points.begin(), points.end(), cmp_by_x);
+```
+
+`sort(begin, end, cmp)`
+
+- `cmp` is a **Callable** object. When called, it accepts two arguments whose type is the same as the element type, and returns `bool`.
+- `std::sort` will use `cmp(x, y)` instead of `x < y` to compare elements.
+- After sorting, `cmp(v[i], v[i + 1])` is true for every `i` $\in$ `[0, v.size()-1)`.
+
+---
+
+## Predicates
+
+To sort numbers in reverse (descending) order:
+
+```cpp
+bool greater_than(int a, int b) { return a > b; }
+std::sort(v.begin(), v.end(), greater_than);
+```
+
+To sort them in ascending order of absolute values:
+
+```cpp
+bool abs_less(int a, int b) { return std::abs(a) < std::abs(b); } // <cmath>
+std::sort(v.begin(), v.end(), abs_less);
+```
+
+---
+
+## Predicates
+
+Many algorithms accept a Callable object. For example, `find_if(begin, end, pred)` finds the first element in `[begin, end)` such that `pred(element)` is true.
+
+```cpp
+bool less_than_10(int x) {
+  return x < 10;
+}
+std::vector<int> v = someValues();
+auto pos = std::find_if(v.begin(), v.end(), less_than_10);
+```
+
+`for_each(begin, end, operation)` performs `operation(element)` for each element in the range `[begin, end)`.
+
+```cpp
+void print_int(int x) { std::cout << x << ' '; }
+std::for_each(v.begin(), v.end(), print_int);
+```
+
+---
+
+## Predicates
+
+Many algorithms accept a Callable object. For example, `find_if(begin, end, pred)` finds the first element in `[begin, end)` such that `pred(element)` is true.
+
+What if we want to find the first element less than **`k`**, where `k` is determined at run-time?
+
+---
+
+## Predicates
+
+What if we want to find the first element less than **`k`**, where `k` is determined at run-time?
+
+```cpp
+struct LessThan {
+  int k_;
+  LessThan(int k) : k_{k} {}
+  bool operator()(int x) const {
+    return x < k_;
+  }
+};
+auto pos = std::find_if(v.begin(), v.end(), LessThan(k));
+```
+
+- `LessThan(k)` constructs an object of type `LessThan`, with the member `k_` initialized to `k`.
+- This object has an `operator()` overloaded: **the function-call operator**.
+  - `LessThan(k)(x)` is equivalent to `LessThan(k).operator()(x)`, which is `x < k`.
+
+---
+
+## Function objects
+
+Modern way:
+
+```cpp
+struct LessThan {
+  int k_; // No constructor is needed, and k_ is public.
+  bool operator()(int x) const { return x < k_; }
+};
+auto pos = std::find_if(v.begin(), v.end(), LessThan{k}); // {} instead of ()
+```
+
+A **function object** (aka "functor") is an object `fo` with `operator()` overloaded.
+
+- `fo(arg1, arg2, ...)` is equivalent to `fo.operator()(arg1, arg2, ...)`. Any number of arguments is allowed.
+
+---
+
+## Function objects
+
+Exercise: use a function object to compare integers by their absolute values.
+
+```cpp
+struct AbsCmp {
+  bool operator()(int a, int b) const {
+    return std::abs(a) < std::abs(b);
+  }
+};
+std::sort(v.begin(), v.end(), AbsCmp{});
+```
+
+---
+
+## Lambda expressions
+
+Defining a function or a function object is not good enough:
+
+- These functions or function objects are almost used only once, but
+- too many lines of code is needed, and
+- you have to add names to the global scope.
+
+Is there a way to define an **unnamed**, immediate callable object?
+
+---
+
+## Lambda expressions
+
+To sort by comparing absolute values:
+
+```cpp
+std::sort(v.begin(), v.end(),
+          [](int a, int b) -> bool { return std::abs(a) < std::abs(b); });
+```
+
+To sort in reverse order:
+
+```cpp
+std::sort(v.begin(), v.end(),
+          [](int a, int b) -> bool { return a > b; });
+```
+
+To find the first element less than `k`:
+
+```cpp
+auto pos = std::find_if(v.begin(), v.end(),
+                        [k](int x) -> bool { return x < k; });
+```
+
+---
+
+## Lambda expressions
+
+The return type can be omitted and deduced by the compiler.
+
+```cpp
+std::sort(v.begin(), v.end(),
+          [](int a, int b) { return std::abs(a) < std::abs(b); });
+```
+
+```cpp
+std::sort(v.begin(), v.end(),
+          [](int a, int b) { return a > b; });
+```
+
+```cpp
+auto pos = std::find_if(v.begin(), v.end(),
+                        [k](int x) { return x < k; });
+```
+
+---
+
+## Lambda expressions
+
+A lambda expression has the following syntax:
+
+```cpp
+[capture_list](params) -> return_type { function_body }
+```
+
+The compiler will generate a function object according to it.
+
+```cpp
+int k = 42;
+auto f = [k](int x) -> bool { return x < k; };
+bool b1 = f(10); // true
+bool b2 = f(100); // false
+```
+
+---
+
+## Lambda expressions
+
+```cpp
+[capture_list](params) -> return_type { function_body }
+```
+
+It is allowed to write complex statements in `function_body`, just as in a function.
+
+```cpp
+struct Point2d { double x, y; };
+std::vector<Point2d> points = somePoints();
+// prints the l2-norm of every point
+std::for_each(points.begin(), points.end(),
+              [](const Point2d &p) {
+                auto norm = std::sqrt(p.x * p.x + p.y * p.y);
+                std::cout << norm << std::endl;
+              });
+```
+
+---
+
+## Lambda expressions: capture
+
+To capture more variables:
+
+```cpp
+auto pos = std::find_if(v.begin(), v.end(),
+                    [lower, upper](int x) { return lower <= x && x <= upper;});
+```
+
+To capture by reference (so that copy is avoided)
+
+```cpp
+std::string str = someString();
+std::vector<std::string> wordList;
+// finds the first string that is lexicographically greater than `str`,
+// but shorter than `str`.
+auto pos = std::find_if(wordList.begin(), wordList.end(),
+     [&str](const std::string &s) { return s > str && s.size() < str.size();});
+```
+
+Here `&str` indicates that `str` is captured by referece. **`&` here is not the address-of operator!**
+
+---
+
+## Lambda expressions: capture
+
+More on lambda expressions:
+
+- *C++ Primer* Section 10.3
+- *Effective Modern C++* Chapter 6 (Item 31-34)
+
+Note that *C++ Primer (5th edition)* is based on C++11 and *Effective Modern C++* is based on C++14. Lambda expressions are evolving at a very fast pace in modern C++, with many new things added and many limitations removed.
+
+More fancy ways of writing lambda expressions are not covered in CS100.
