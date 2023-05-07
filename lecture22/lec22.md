@@ -989,7 +989,7 @@ s3.insert(Student{"Alice", 42}); // Error: No operator< available.
 
 Defined in `<set>`.
 
-- `std::set<T>` is a set whose elements are of type `T`. **`operator<(const T, const T)` should be supported**, because it is usually implemented as Red-black trees.
+- `std::set<T>` is a set whose elements are of type `T`. **`operator<(const T, const T)` should be supported**, because `set` is usually implemented as Red-black trees.
 - `std::set<T, Cmp>` is also available. `x < y` will be replaced with `cmp(x, y)`, where `cmp` is a function object of type `Cmp`.
 
 ```cpp
