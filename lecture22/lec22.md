@@ -1305,10 +1305,10 @@ Note: `m.find(key)` does not insert elements. `m[key]` will insert an element if
 
 Maps based on red-black trees:
 - [`std::map`](https://en.cppreference.com/w/cpp/container/map)
-- [`std::multimap`](https://en.cppreference.com/w/cpp/container/multimap): allows duplicate elements
+- [`std::multimap`](https://en.cppreference.com/w/cpp/container/multimap): allows duplicate *keys*
 
 Maps based on hash-tables: (since C++11)
 - [`std::unordered_map`](https://en.cppreference.com/w/cpp/container/unordered_map): hash-table version of `std::map`
-- [`std::unordered_multimap`](https://en.cppreference.com/w/cpp/container/unordered_multimap): allows duplicate elements
+- [`std::unordered_multimap`](https://en.cppreference.com/w/cpp/container/unordered_multimap): allows duplicate *keys*
 
 Maps based on hash-tables provides (average-case) $O(1)$ time operations, but requires the *key* to be hashable.
