@@ -1156,12 +1156,12 @@ Fast random access like `v[i]` is not supported.
 ## Other kinds of sets:
 
 Sets based on red-black trees:
-- `std::set`
-- `std::multiset`: allows duplicate elements
+- [`std::set`](https://en.cppreference.com/w/cpp/container/set)
+- [`std::multiset`](https://en.cppreference.com/w/cpp/container/multiset): allows duplicate elements
 
 Sets based on hash-tables: (since C++11)
-- `std::unordered_set`: hash-table version of `std::set`
-- `std::unordered_multiset`: allows duplicate elements
+- [`std::unordered_set`](https://en.cppreference.com/w/cpp/container/unordered_set): hash-table version of `std::set`
+- [`std::unordered_multiset`](https://en.cppreference.com/w/cpp/container/unordered_multiset): allows duplicate elements
 
 Sets based on hash-tables provides (average-case) $O(1)$ time operations, but requires the data to be hashable.
 
@@ -1169,3 +1169,146 @@ Sets based on hash-tables provides (average-case) $O(1)$ time operations, but re
 
 ## Motivation: map
 
+Represent a map: $f:S\to T$.
+
+- For sequence containers `Container<Type>`: $S=\{0,1,2,\cdots,N-1\}$ (index), $T$ is the set of values of type `Type`.
+- For `std::set<Type>`: $T=\{\text{exist}, \text{not-exist}\}$, $S$ is the set of values of type `Type`.
+
+`std::map<Key, Value>`: defined in `<map>`
+- `Key` is the type of elements in $S$, and `Value` is the type of elements in $T$.
+- Stores "key-value" pairs.
+
+---
+
+## Motivation: map
+
+Example: Count the occurrences of strings.
+
+```cpp
+std::map<std::string, int> counter; // maps every string to an integer
+std::string word;
+while (std::cin >> word)
+  ++counter[word]; // !!
+```
+
+Now for any string `str`, `counter[str]` is an integer indicating how many times `str` has occurred.
+
+---
+
+## `std::map`: comparison with `std::set`
+
+`std::map<Key, Value>` has two template parameters: `Key` and `Value`.
+- If we ignore `Value`, it is a `std::set<Key>`.
+  - Duplicate keys are not allowed.
+  - `operator<(const Key, const Key)` is required.
+  - Elements are stored **in ascending order of keys**.
+  - Keys cannot be modified directly.
+- The element type of `std::map<Key, Value>` is `std::pair<const Key, Value>`.
+  - `*iter` returns `std::pair<const Key, Value> &`.
+
+---
+
+## `std::map`: comparison with `std::set`
+
+Constructors:
+- `std::map<Key, Value> m{{key1, value1}, {key2, value2}, ...};`
+- `std::map<Key, Value> m(begin, end)`, but the elements should be pairs:
+
+  ```cpp
+  std::vector<std::pair<int, int>> v{{1, 2}, {3, 4}};
+  std::map<int, int> m(v.begin(), v.end());
+  ```
+
+Insertion:
+- `m.insert({key, value})`
+- `m.insert({{key1, value1}, {key2, value2}, ...})`
+- `m.insert(begin, end)`
+
+---
+
+## `std::map`: comparison with `std::set`
+
+Deletion:
+- `m.erase(pos)`, `m.erase(begin, end)`: same as `std::set<T>::erase`.
+- `m.erase(key)`: Removes the element whose *key* is `key`.
+
+Iterators: **BidirectionalIterator**, pointing to `std::pair<const Key, Value>`.
+
+```cpp
+std::map<std::string, int> counter = someValues();
+for (auto it = counter.begin(); it != counter.end(); ++it)
+  std::cout << it->first << " occurred " << it->second << " times.\n";
+```
+
+---
+
+## `std::map`: traversal
+
+Use range-for:
+
+```cpp
+for (const auto &kvpair : counter)
+  std::cout << kvpair.first << " occurred " << kvpair.second << " times.\n";
+```
+
+It's so annoying to deal with the `pair` stuff...
+
+---
+
+## `std::map`: traversal
+
+Use range-for:
+
+```cpp
+for (const auto &kvpair : counter)
+  std::cout << kvpair.first << " occurred " << kvpair.second << " times.\n";
+```
+
+It's so annoying to deal with the `pair` stuff...
+
+**C++17 structured binding** kills the game!
+
+```cpp
+for (const auto &[word, occ] : counter)
+  std::cout << word << " occurred " << occ << " times.\n";
+```
+
+(Looks very much like Python unpacking.)
+
+---
+
+## `std::map`-specific: `operator[]`
+
+`m[key]` finds the key-value pair whose *key* is equivalent to `key`.
+- If such *key* does not exist, inserts `{key, Value{}}` - the *value* is **value-initialized**.
+- Then, returns reference to the *value*.
+
+```cpp
+std::map<std::string, int> counter;
+std::string word;
+while (std::cin >> word)
+  ++counter[word]; // If `word` does not exist in `counter`,
+                   // a pair {word, 0} is inserted first.
+```
+
+---
+
+## `std::map`: element lookup
+
+`m.find(key)`, `m.count(key)`, and some other member functions.
+
+Note: `m.find(key)` does not insert elements. `m[key]` will insert an element if that *key* does not exist.
+
+---
+
+## Other kinds of maps:
+
+Maps based on red-black trees:
+- [`std::map`](https://en.cppreference.com/w/cpp/container/map)
+- [`std::multimap`](https://en.cppreference.com/w/cpp/container/multimap): allows duplicate elements
+
+Maps based on hash-tables: (since C++11)
+- [`std::unordered_map`](https://en.cppreference.com/w/cpp/container/unordered_map): hash-table version of `std::map`
+- [`std::unordered_multimap`](https://en.cppreference.com/w/cpp/container/unordered_multimap): allows duplicate elements
+
+Maps based on hash-tables provides (average-case) $O(1)$ time operations, but requires the *key* to be hashable.
