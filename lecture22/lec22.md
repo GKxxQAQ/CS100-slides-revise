@@ -949,3 +949,223 @@ So many things in the algorithm library! How can we remember them?
 
 ---
 
+## Motivation: set
+
+Represent a "set":
+- Quick insertion, lookup and deletion of elements.
+- Order does not matter.
+
+Sequence containers do not suffice:
+- Lookup of elements is $O(n)$.
+- Quick insertion/deletion only happens at certain positions for some containers.
+  - e.g. `vector` only supports quick insertion/deletion at the end.
+- The order of elements is preserved, which is not important.
+
+You will learn the appropriate data structures in CS101.
+
+---
+
+## `std::set`
+
+Defined in `<set>`.
+
+- `std::set<T>` is a set whose elements are of type `T`. **`operator<(const T, const T)` should be supported**, because it is usually implemented as Red-black trees.
+- `std::set<T, Cmp>` is also available. `x < y` will be replaced with `cmp(x, y)`, where `cmp` is a function object of type `Cmp`.
+
+```cpp
+std::set<int> s1; // An empty set of ints
+std::set<std::string> s2{"hello", "world"}; // A set of strings,
+                                            // initialized with two elements
+struct Student { std::string name; int id; };
+std::set<Student> s3; // No operator< for Student is available.
+                      // This line alone does not cause error, but you cannot
+                      // insert elements into it.
+s3.insert(Student{"Alice", 42}); // Error: No operator< available.
+```
+
+---
+
+## `std::set`
+
+Defined in `<set>`.
+
+- `std::set<T>` is a set whose elements are of type `T`. **`operator<(const T, const T)` should be supported**, because it is usually implemented as Red-black trees.
+- `std::set<T, Cmp>` is also available. `x < y` will be replaced with `cmp(x, y)`, where `cmp` is a function object of type `Cmp`.
+
+```cpp
+struct Student { std::string name; int id; };
+struct CmpStudentByName {
+  bool operator()(const Student &a, const Student &b) const {
+    return a.name < b.name;
+  }
+};
+std::set<Student, CmpStudentByName> students; // OK
+students.insert(Student{"Alice", 42}); // OK
+```
+
+---
+
+## `std::set`
+
+Constructors
+
+```cpp
+std::set<Type> s1{a, b, c, ...};
+std::set<Type> s2(begin, end); // An iterator range [begin, end)
+```
+
+C++17 CTAD (Class Template Argument Deduction) also applies:
+
+```cpp
+std::set s1{a, b, c, ...}; // Element type is deduced according to the list
+std::set s2(begin, end); // Element type is deduced according to
+                         // the type of elements pointed by `begin` and `end`.
+```
+
+Besides, `std::set` is copy-constructible, copy-assignable, move-constructible and move-assignable, just as the sequence containers we have learned.
+
+**`std::set` does not contain duplicate elements.** These constructors will ignore duplicate elements.
+
+---
+
+## `std::set`: operations
+
+Common operations: `s.empty()`, `s.size()`, `s.clear()`.
+
+Insertion: `insert` and `emplace`. **Duplicate elements will not be inserted.**
+- `s.insert(x)`, `s.insert({a, b, ...})`, `s.insert(begin, end)`.
+
+```cpp
+std::set s{3, 2, 5, 5, 1}; // {1, 2, 3, 5}. The duplicate 5 is removed.
+std::cout << s.size() << std::endl; // 4
+s.insert(42); // {1, 2, 3, 5, 42}
+s.insert(42); // Nothing is inserted. (No errors.)
+int a[]{10, 20, 30};
+s.insert(a, a + 3); // An iterator range.
+                    // s now contains {1, 2, 3, 5, 10, 20, 30, 42}.
+s.insert({11, 12}); // {1, 2, 3, 5, 10, 11, 12, 20, 30, 42}.
+```
+
+---
+
+## `std::set`: insertion
+
+Insertion: `insert` and `emplace`. **Duplicate elements will not be inserted.**
+- `s.emplace(args...)`. **Forwards** the arguments `args...` to the constructor of the element type, and constructs the element in-place.
+
+```cpp
+std::set<std::string> s;
+s.emplace(10, 'c'); // inserts a string "cccccccccc"
+```
+
+`s.insert(x)` and `s.emplace(args...)` returns **`std::pair<iterator, bool>`**:
+- On success, `.first` is an `iterator` pointing to the inserted element, and `.second` is `true`.
+- On failure, `.first` is an `iterator` pointing to the element that prevented the insertion, and `.second` is `false`.
+
+---
+
+## `std::set`: iterators
+
+`s.begin()`, `s.end()`: Begin and off-the-end iterators.
+
+The iterator of `std::set` is **BidirectionalIterator**:
+- Supports `*it`, `it->mem`, `++it`, `it++`, `--it`, `it--`, `it1 == it2`, `it1 != it2`.
+
+**The elements are in ascending order**: The following assertion always succeeds (if both `tmp` and `iter` are dereferenceable).
+
+```cpp
+auto tmp = iter;
+++iter;
+assert(*tmp < *iter);
+```
+
+---
+
+## `std::set`: iterators
+
+**Elements in a `set` cannot be modified directly**: `*iter` returns a reference-to-`const`.
+- The elements are stored in specific positions in the red-black tree, according to their values.
+- You cannot change their values arbitrarily.
+
+---
+
+## `std::set`: traversal
+
+Range-for still works!
+
+```cpp
+std::set<int> s{5, 5, 7, 3, 20, 12, 42};
+for (auto x : s)
+  std::cout << x << ' ';
+std::cout << std::endl;
+```
+
+Output: `3, 5, 7, 12, 20, 42 `. The elements are in ascending order.
+
+Equivalent way: Use iterators
+
+```cpp
+for (auto it = s.begin(); it != s.end(); ++it)
+  std::cout << *it << ' ';
+std::cout << std::endl;
+```
+
+---
+
+## `std::set`: deletion
+
+Delete elements: `erase`
+- `s.erase(x)`, `s.erase(pos)`, `s.erase(begin, end)`, where `pos` is an iterator pointing to some element in `s`, and `[begin, end)` is an iterator range in `s`.
+- `s.erase(x)` removes the element that is equivalent to `x`, **if any**.
+  - returns `0` or `1`, indicating the number of elements removed.
+
+```cpp
+std::set<int> s{5, 5, 7, 3, 20, 12, 42};
+std::cout << s.erase(42) << std::endl; // 42 is removed. output: 1
+// s is now {3, 5, 7, 12, 20}.
+s.erase(++++s.begin()); // 7 is removed.
+```
+
+---
+
+## `std::set`: element lookup
+
+`s.find(x)`, `s.count(x)`, and some other functions.
+
+`s.find(x)` returns an iterator pointing to the element equivalent to `x` (if found), or `s.end()` (if not found).
+
+```cpp
+std::set<int> s = someValues();
+if (s.find(x) != s.end()) // x is found
+  // ...
+```
+
+---
+
+## `std::set`: pros and cons
+
+The time complexity of insertion, deletion, and lookup of elements in a `std::set`: **logarithmic in the size of the container**. ($O(\log n)$)
+- Compared to sequence containers, this is (almost) a huge improvement.
+
+Elements are sorted automatically.
+
+Fast random access like `v[i]` is not supported.
+
+---
+
+## Other kinds of sets:
+
+Sets based on red-black trees:
+- `std::set`
+- `std::multiset`: allows duplicate elements
+
+Sets based on hash-tables: (since C++11)
+- `std::unordered_set`: hash-table version of `std::set`
+- `std::unordered_multiset`: allows duplicate elements
+
+Sets based on hash-tables provides (average-case) $O(1)$ time operations, but requires the data to be hashable.
+
+---
+
+## Motivation: map
+
