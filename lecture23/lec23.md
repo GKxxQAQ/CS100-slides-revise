@@ -683,6 +683,86 @@ Dynarray<T>::Dynarray(Iterator begin, Iterator end)
 
 ---
 
+## Curiously Recurring Template Pattern (CRTP)
+
+Example 1: We have seen this `Uncopyable` in Homework 7:
+
+```cpp
+class Uncopyable {
+  Uncopyable(const Uncopyable &) = delete;
+  Uncopyable &operator=(const Uncopyable &) = delete;
+
+ public:
+  Uncopyable() = default;
+};
+```
+
+A class can be made uncopyable by inheriting `Uncopyable`.
+
+But if both `A` and `B` should be uncopyable, can we make each of them inherit a unique base class?
+
+---
+
+## Curiously Recurring Template Pattern (CRTP)
+
+```cpp
+template <typename Derived>
+class Uncopyable {
+  Uncopyable(const Uncopyable &) = delete;
+  Uncopyable &operator=(const Uncopyable &) = delete;
+
+ public:
+  Uncopyable() = default;
+};
+
+class A : public Uncopyable<A> {};
+class B : public Uncopyable<B> {};
+```
+
+Every class `C` inherits a unique base class `Uncopyable<C>`!
+
+---
+
+## Curiously Recurring Template Pattern (CRTP)
+
+Example 2: With the prefix incrementation operator `operator++` defined, the postfix version is always defined as follows:
+
+```cpp
+auto operator++(int) {
+  auto tmp = *this;
+  ++*this;
+  return tmp;
+}
+```
+
+How can we avoid repeating ourselves?
+
+---
+
+## Curiously Recurring Template Pattern (CRTP)
+
+```cpp
+template <typename Derived>
+class Incrementable {
+ public:
+  auto operator++(int) {
+    // Since we are sure that the dynamic type of `*this` is `Derived`,
+    // we can use static_cast here.
+    Derived *real_this = static_cast<Derived *>(this);
+    auto tmp = *real_this; ++*real_this; return tmp;
+  }
+};
+class A : public Incrementable<A> {
+ public:
+  A &operator++() { /* ... */ }
+  // The operator++(int) is inherited from Incrementable<A>.
+};
+```
+
+[CppCon2022: How C++23 Changes the Way We Write Code](https://www.bilibili.com/video/BV1FB4y1H7VS?p=5) Jump to 23:55 to see how C++23 can simplify CRTP.
+
+---
+
 ## Alias templates
 
 The `using` declaration can also declare **alias templates**:
@@ -707,3 +787,9 @@ namespace std::numbers {
 auto pi_d = std::numbers::pi_v<double>; // The `double` version of π
 auto pi_f = std::numbers::pi_v<float>;  // The `float` version of π
 ```
+
+---
+
+# Template specialization
+
+---
