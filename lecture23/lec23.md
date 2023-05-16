@@ -14,8 +14,10 @@ Templates
 - Function templates
 - Class templates
 - Template specialization
-- Non-type template parameters
-- Variadic template
+
+---
+
+# Function templates
 
 ---
 
@@ -405,5 +407,303 @@ auto makeUnique(U &&arg) {
 }
 ```
 
-How can we allow multiple arguments? Discussed later.
+---
 
+## Variadic templates
+
+To support an unknown number of arguments of unknown types:
+
+```cpp
+template <typename... Types>
+void foo(Types... params);
+```
+
+It can be called with any number of arguments, of any types:
+
+```cpp
+foo();         // OK: `params` contains no arguments
+foo(42);       // OK: `params` contains one argument: int
+foo(42, 3.14); // OK: `params` contains two arguments: int and double
+```
+
+`Types` is a **template parameter pack**, and `params` is a **function parameter pack**.
+
+---
+
+## Parameter pack
+
+The types of the function parameters can also contain `const` or references:
+
+```cpp
+// All arguments are passed by reference-to-const
+template <typename... Types>
+void foo(const Types &...params);
+// All arguments are passed by forwarding reference
+template <typename... Types>
+void foo(Types &&...params);
+```
+
+---
+
+## Pack expansion
+
+A **pattern** followed by `...`, in which the name of at least one parameter pack appears at least once, is **expanded** into zero or more comma-separated instantiations of the pattern.
+- The name of the parameter pack is replaced by each of the elements from the pack, in order.
+
+```cpp
+template <typename... Types>
+void foo(Types &&...params) {
+  // Suppose Types is T1, T2, T3 and params is p1, p2, p3.
+  // &params... is expanded to &p1, &p2, &p3.
+  // func(params...) is expanded to func(p1), func(p2), func(p3).
+  // std::forward<Types>(params)... is expanded to
+  //   std::forward<T1>(p1), std::forward<T2>(p2), std::forward<T3>(p3)
+}
+```
+
+---
+
+## Perfect forwarding: final version
+
+Perfect forwarding for any number of arguments of any types:
+
+```cpp
+template <typename T, typename... Ts>
+auto makeUnique(Ts &&...params) {
+  return std::unique_ptr<T>(new T(std::forward<Ts>(params)...));
+}
+```
+
+This is how `std::make_unique`, `std::make_shared` and `std::vector<T>::emplace_back` forward arguments.
+
+---
+
+## `auto` and template argument deduction
+
+We have seen that the deduction rule that `auto` uses is exactly the template argument deduction rule.
+
+If we declare the parameter types in an **lambda expression** with `auto`, it becomes a **generic lambda**:
+
+```cpp
+auto less = [](const auto &lhs, const auto &rhs) { return lhs < rhs; };
+std::string s1, s2;
+bool b1 = less(10, 15); // 10 < 15
+bool b2 = less(s1, s2); // s1 < s2
+```
+
+---
+
+## `auto` and template argument deduction
+
+We have seen that the deduction rule that `auto` uses is exactly the template argument deduction rule.
+
+**Since C++20**: Function parameter types can be declared with `auto`.
+
+```cpp
+auto add(const auto &a, const auto &b) {
+  return a + b;
+}
+// Equialent way: template
+template <typename T, typename U>
+auto add(const T &a, const U &b) {
+  return a + b;
+}
+```
+
+---
+
+# Class templates
+
+---
+
+## Define a class template
+
+Let's make our `Dynarray` a template `Dynarray<T>` to support any element type `T`.
+
+```cpp
+template <typename T>
+class Dynarray {
+  std::size_t m_length;
+  T *m_storage;
+
+ public:
+  Dynarray();
+  Dynarray(const Dynarray<T> &);
+  Dynarray(Dynarray<T> &&) noexcept;
+  // other members ...
+};
+```
+
+---
+
+## Define a class template
+
+A class template is a **guideline** for the compiler: When a type `Dynarray<T>` is used for a certain type `T`, the compiler will **instantiate** that class type according to the class template.
+
+For different types `T` and `U`, `Dynarray<T>` and `Dynarray<U>` **are different types**.
+
+```cpp
+template <typename T>
+class X {
+  int x = 42; // private
+ public:
+  void foo(X<double> xd) {
+    x = xd.x; // access a private member of X<double>
+    // This is valid only when T is double.
+  }
+};
+```
+
+---
+
+## Define a class template
+
+Inside the class template, the template parameters can be omitted when we are referring to the self type:
+
+```cpp
+template <typename T>
+class Dynarray {
+  std::size_t m_length;
+  T *m_storage;
+
+ public:
+  Dynarray();
+  Dynarray(const Dynarray &); // Parameter type is const Dynarray<T> &
+  Dynarray(Dynarray &&) noexcept; // Parameter type is Dynarray<T> &&
+  // other members ...
+};
+```
+
+---
+
+## Member functions of a class template
+
+A member function of a class template is also a function template.
+
+If we want to define it outside the class, a template declaration is needed.
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+```cpp
+class Dynarray {
+ public:
+  int &at(std::size_t n);
+};
+
+int &Dynarray::at(std::size_t n) {
+  return m_storage[n];
+}
+```
+  </div>
+  <div>
+
+```cpp
+template <typename T>
+class Dynarray {
+ public:
+  int &at(std::size_t n);
+};
+template <typename T>
+int &Dynarray<T>::at(std::size_t n) {
+  return m_storage[n];
+}
+```
+  </div>
+</div>
+
+---
+
+## Member functions of a class template
+
+A member function of a class template is also a function template.
+
+This means that **a member function will not be instantiated if it is not used!**
+
+<div style="display: grid; grid-template-columns: 1fr 1fr;">
+  <div>
+
+```cpp
+template <typename T>
+struct X {
+  T x;
+  void foo() { x = 42; }
+  void bar() { x = "hello"; }
+};
+```
+  </div>
+  <div>
+
+```cpp
+X<int> xi; // OK
+xi.foo();  // OK
+X<std::string> xs; // OK
+xs.bar();          // OK
+```
+  </div>
+</div>
+
+No compile-error occurs: `X<int>::bar()` and `X<std::string>::foo()` are not instantiated because they are not called.
+
+---
+
+## Member functions of a class template
+
+A member function itself can also be a template:
+
+```cpp
+template <typename T>
+class Dynarray {
+ public:
+  template <typename Iterator>
+  Dynarray(Iterator begin, Iterator end)
+      : m_length(std::distance(begin, end)), m_storage(new T[m_length]) {
+    std::copy(begin, end, m_storage);
+  }
+};
+std::vector<std::string> vs = someValues();
+Dynarray<std::string> ds(vs.begin(), vs.end()); // Values are copied from vs.
+```
+
+---
+
+## Member functions of a class template
+
+A member function itself can also be a template. To define it outside the class, **two** template declarations are needed:
+
+```cpp
+// This cannot be written as `template <typename T, typename Iterator>`
+template <typename T>
+template <typename Iterator>
+Dynarray<T>::Dynarray(Iterator begin, Iterator end)
+    : m_length(std::distance(begin, end)), m_storage(new T[m_length]) {
+  std::copy(begin, end, m_storage);
+}
+```
+
+---
+
+## Alias templates
+
+The `using` declaration can also declare **alias templates**:
+
+```cpp
+template <typename T>
+using pii = std::pair<T, T>;
+pii<int> p1(2, 3); // std::pair<int, int>
+```
+
+---
+
+## Template variables (since C++17)
+
+Variables can also be templates. Typical example: the C++20 `<numbers>` library:
+
+```cpp
+namespace std::numbers {
+  template <typename T>
+  inline constexpr T pi_v = /* unspecified */;
+}
+auto pi_d = std::numbers::pi_v<double>; // The `double` version of π
+auto pi_f = std::numbers::pi_v<float>;  // The `float` version of π
+```
