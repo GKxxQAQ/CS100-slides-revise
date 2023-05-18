@@ -14,6 +14,7 @@ Templates
 - Function templates
 - Class templates
 - Template specialization
+- `type_traits`
 
 ---
 
@@ -455,7 +456,8 @@ template <typename... Types>
 void foo(Types &&...params) {
   // Suppose Types is T1, T2, T3 and params is p1, p2, p3.
   // &params... is expanded to &p1, &p2, &p3.
-  // func(params...) is expanded to func(p1), func(p2), func(p3).
+  // func(params)... is expanded to func(p1), func(p2), func(p3).
+  // func(params...) is expanded to func(p1, p2, p3)
   // std::forward<Types>(params)... is expanded to
   //   std::forward<T1>(p1), std::forward<T2>(p2), std::forward<T3>(p3)
 }
@@ -748,7 +750,7 @@ class Incrementable {
   auto operator++(int) {
     // Since we are sure that the dynamic type of `*this` is `Derived`,
     // we can use static_cast here.
-    Derived *real_this = static_cast<Derived *>(this);
+    auto real_this = static_cast<Derived *>(this);
     auto tmp = *real_this; ++*real_this; return tmp;
   }
 };
@@ -790,6 +792,218 @@ auto pi_f = std::numbers::pi_v<float>;  // The `float` version of π
 
 ---
 
+## Non-type template parameters
+
+Apart from types, a template parameter can also be an integer, an lvalue reference, a pointer, ...
+
+Since C++20, floating-point types and *literal class types* with certain properties are also allowed.
+
+```cpp
+template <typename T, std::size_t N>
+class array {
+  T data[N];
+  // ...
+};
+array<int, 10> a;
+```
+
+---
+
+## Non-type template parameters
+
+Define a function that accepts an array of **any length**, **any type**:
+
+```cpp
+template <typename T, std::size_t N>
+void print_array(T (&a)[N]) {
+  for (const auto &x : a)
+    std::cout << x << ' ';
+  std::cout << std::endl;
+}
+int a[10]; double b[20];
+print_array(a); // T=int, N=10
+print_array(b); // T=double, N=20
+```
+
+---
+
 # Template specialization
 
 ---
+
+## Specialization for a function template
+
+```cpp
+template <typename T>
+int compare(T const &lhs, T const &rhs) {
+  if (lhs < rhs) return -1;
+  else if (rhs < lhs) return 1;
+  else return 0;
+}
+```
+
+What happens for C-style strings?
+
+```cpp
+const char *a = "hello", b[] = "world";
+auto x = compare(a, b);
+```
+
+This is comparing two pointers, instead of comparing the strings!
+
+---
+
+## Specialization for a function template
+
+```cpp
+template <typename T>
+int compare(T const &lhs, T const &rhs) {
+  if (lhs < rhs) return -1;
+  else if (rhs < lhs) return 1;
+  else return 0;
+}
+template <> // specialized version for T = const char *
+int compare<const char *>(const char *const &lhs, const char *const &rhs) {
+  return std::strcmp(lhs, rhs);
+}
+```
+
+Write a specialized version of that function with the template parameters taking a certain group of values.
+
+The type `const T &` with `T = const char *` is `const char *const &`: A reference bound to a `const` pointer which points to `const char`.
+
+---
+
+## Specialization for a function template
+
+It is also allowed to omit `<const char *>` following the name:
+
+```cpp
+template <typename T>
+int compare(T const &lhs, T const &rhs) {
+  if (lhs < rhs) return -1;
+  else if (rhs < lhs) return 1;
+  else return 0;
+}
+template <>
+int compare(const char *const &lhs, const char *const &rhs) {
+  return std::strcmp(lhs, rhs);
+}
+```
+
+---
+
+## Specialization for a function template
+
+Is this a specialization?
+
+```cpp
+template <typename T>
+int compare(T const &lhs, T const &rhs);
+template <typename T>
+int compare(const std::vector<T> &lhs, const std::vector<T> &rhs);
+```
+
+No! These functions constitute **overloading** (allowed).
+
+---
+
+## Specialization for a function template
+
+Is this a specialization?
+
+```cpp
+template <typename T>
+int compare(T const &lhs, T const &rhs);
+template <typename T>
+int compare<std::vector<T>>(const std::vector<T> &lhs,
+                            const std::vector<T> &rhs);
+```
+
+- Since we write `int compare<std::vector<T>>(...)`, this **is** a specialization.
+- However, such specialization is a **partial specialization**: The specialized function is still a function template.
+  
+  - **Partial specialization for function templates is not allowed.**
+
+---
+
+## Specialization for a class template
+
+It is allowed to write a specialization for class templates.
+
+```cpp
+template <typename T>
+struct Dynarray { /* ... */ };
+template <> // specialization for T = bool
+struct Dynarray<bool> { /* ... */ };
+```
+
+**Partial specialization is also allowed**:
+
+```cpp
+template <typename T, typename Alloc>
+class vector { /* ... */ };
+// specialization for T = bool, while Alloc remains a template parameter.
+template <typename Alloc>
+class vector<bool, Alloc> { /* ... */ };
+```
+
+---
+
+# `type_traits`
+
+---
+
+## Know whether two types are the same?
+
+```cpp
+template <typename T, typename U>
+struct is_same {
+  static const bool result = false;
+};
+template <typename T> // specialization for U = T
+struct is_same<T, T> {
+  static const bool result = true;
+};
+```
+
+- `is_same<int, double>::result` is false.
+- `is_same<int, int>::result` is true.
+- Are `int` and `signed` the same type? Let `is_same` tell you!
+
+---
+
+## Know whether a type is a pointer?
+
+```cpp
+template <typename T>
+struct is_pointer {
+  static const bool result = false;
+};
+template <typename T>
+struct is_pointer<T *> { // specialization for <T *> for some T.
+  static const bool result = true;
+};
+```
+
+- `is_pointer<int *>::result` is true.
+- `is_pointer<int>::result` is false.
+- Is `std::vector<int>::iterator` actually a pointer? Is `int[10]` the same thing as `int *`? Consult these "functions"!
+
+---
+
+## `<type_traits>`
+
+`std::is_same`, `std::is_pointer`, as well as a whole bunch of other "functions": [Go to this standard library.](https://en.cppreference.com/w/cpp/header/type_traits)
+
+This is part of the **metaprogramming library**.
+
+---
+
+## Template metaprogramming
+
+Template metaprogramming is a very special and powerful technique that makes use of the compile-time computation of C++ compilers. (It is [Turing-complete](https://en.wikipedia.org/wiki/Turing_completeness) and [pure functional programming](https://en.wikipedia.org/wiki/Purely_functional_programming).)
+
+Learn a little bit more in recitations.
+
+In modern C++, there are many more things that facilitate compile-time computations: `constexpr`, `consteval`, `constinit`, `concept`, `requires`, ...
