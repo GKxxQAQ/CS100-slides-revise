@@ -841,7 +841,7 @@ int compare(T const &lhs, T const &rhs) {
 What happens for C-style strings?
 
 ```cpp
-const char *a = "hello", b[] = "world";
+const char *a = "hello", *b = "world";
 auto x = compare(a, b);
 ```
 
