@@ -580,9 +580,7 @@ class Dynarray {
 
 ## Member functions of a class template
 
-A member function of a class template is also a function template.
-
-If we want to define it outside the class, a template declaration is needed.
+If we want to define a member function outside the template class, a template declaration is also needed.
 
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
   <div>
@@ -618,9 +616,7 @@ int &Dynarray<T>::at(std::size_t n) {
 
 ## Member functions of a class template
 
-A member function of a class template is also a function template.
-
-This means that **a member function will not be instantiated if it is not used!**
+**A member function will not be instantiated if it is not used!**
 
 <div style="display: grid; grid-template-columns: 1fr 1fr;">
   <div>
