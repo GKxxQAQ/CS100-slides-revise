@@ -287,7 +287,7 @@ class Item {
 };
 class DiscountedItem : public Item {
  public:
-  virtual double netPrice(int cnt) const override {
+  double netPrice(int cnt) const override {
     return cnt < m_minQuantity ? cnt * m_price : cnt * m_price * m_discount;
   }
   // other members
@@ -337,14 +337,14 @@ An overriding function is also `virtual`, even if not explicitly declared.
 
 ```cpp
 class DiscountedItem : public Item {
-  double netPrice(int cnt) const override; // correct, implicitly virtual
+  virtual double netPrice(int cnt) const override; // correct, explicitly virtual
 };
 class DiscountedItem : public Item {
   double netPrice(int cnt) const; // also correct, but not recommended
 };
 ```
 
-Both `virtual` and `override` can be omitted for an overriding function, but **the best practice is to always use them**.
+To override a virtual function, both `virtual` and `override` can be omitted, **but the best practice is to always use the `override` keyword.**
 
 The `override` keyword lets the compiler check and report if the function is not truly overriding.
 
@@ -409,7 +409,7 @@ class DiscountedItem : public Item {
   DiscountedItem(const std::string &name, double price,
                  int minQ, double disc)
       : Item(name, price), m_minQuantity(minQ), m_discount(disc) {}
-  virtual double netPrice(int cnt) const override {
+  double netPrice(int cnt) const override {
     return cnt < m_minQuantity ? cnt * m_price : cnt * m_price * m_discount;
   }
 };
@@ -623,12 +623,12 @@ struct A {
   }
 };
 struct B : A {
-  virtual std::string name()const override{
+  std::string name()const override{
     return "B";
   }
 };
 struct C : A {
-  virtual std::string name()const override{
+  std::string name()const override{
     return "C";
   }
 };
@@ -706,11 +706,11 @@ class Rectangle : public Shape {
  public:
   Rectangle(const Point2d &tl, const Point2d &br)
       : m_topLeft(tl), m_bottomRight(br) {} // Base is default-initialized
-  virtual void draw(ScreenHandle &screen) const override { /* ... */ }
-  virtual double area() const override {
+  void draw(ScreenHandle &screen) const override { /* ... */ }
+  double area() const override {
     return (m_bottomRight.x - m_topLeft.x) * (m_bottomRight.y - m_topLeft.y);
   }
-  virtual double perimeter() const override {
+  double perimeter() const override {
     return 2 * (m_bottomRight.x - m_topLeft.x + m_bottomRight.y - m_topLeft.y);
   }
 };
