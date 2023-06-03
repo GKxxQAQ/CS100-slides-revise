@@ -486,7 +486,13 @@ The call to `std::move` **promises** that we do not intend to use `x` again,
 
 - except to assign to it or to destroy it.
 
-After a call to `std::move`, **we cannot make any assumptions about the value of the moved-from object.**
+A call to `std::move` is usually followed by a call to some function that moves the object, after which **we cannot make any assumptions about the value of the moved-from object.**
+
+```cpp
+void foo(X &&x); // moves x
+void foo(const X &x); // copies x
+foo(std::move(x)); // matches foo(X&&), so that x is moved.
+```
 
 "`std::move` does not *move* anything. It just makes a *promise*."
 
